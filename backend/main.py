@@ -33,6 +33,35 @@ import re
 import math 
 
 
+from models import (
+    User,
+    SubscriptionPlan,
+    SubscriptionHistory,
+    UserStats,
+    Transaction,
+    AdminAction,
+    RefreshTokenEmbedded,
+    CurrentSubscriptionEmbedded,
+    SubscriptionHistoryEmbedded,
+    WalletEmbedded,
+    NotificationsEmbedded,
+    SubscriptionPlanResponse,
+    SubscriptionHistoryResponse,
+    TransactionResponse,
+    UserResponseBase,
+    PurchaseSubscriptionResponse,
+    AdminActionResponse,
+    CreateUserRequest,
+    LoginUserRequest,
+    UpdateUserRequest,
+    RefreshTokenRequest,
+    DepositWalletRequest,
+    WithdrawWalletRequest,
+    PurchaseSubscriptionRequest,
+    AdminChangePlanRequest,
+    AdminChangeUserRequest
+)
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -79,346 +108,6 @@ app.add_middleware(
     allow_headers=["Content-Type", "Authorization", "x-access-token"],
 )
 
-#Beanie Models 
-
-# Вложенные структуры
-class RefreshTokenEmbedded(BaseModel):
-    token: str
-    createdAt: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    userAgent: Optional[str] = None
-
-class CurrentSubscriptionEmbedded(BaseModel):
-    planId: Optional[PydanticObjectId] = None
-    startDate: Optional[datetime] = None
-    endDate: Optional[datetime] = None
-    isActive: bool = True
-    autoRenew: bool = True
-    adminNote: Optional[str] = None
-    plan: Optional[Union[Dict[str, Any], 'SubscriptionPlanResponse']] = None
-
-    model_config = ConfigDict(
-        arbitrary_types_allowed=True,
-        json_encoders={
-            datetime: lambda v: v.isoformat() if v else None,
-            PydanticObjectId: lambda v: str(v) if v else None
-        }
-    )
-
-    @field_validator('plan', mode='before')
-    @classmethod
-    def convert_plan_to_dict(cls, v):
-        if v is None:
-            return None
-        if isinstance(v, SubscriptionPlanResponse):
-            return v.model_dump(by_alias=True)
-        return v
-
-class SubscriptionHistoryEmbedded(BaseModel):
-    planId: Optional[PydanticObjectId] = None
-    startDate: Optional[datetime] = None
-    endDate: Optional[datetime] = None  
-    isActive: bool = True
-    changedByAdmin: bool = False
-    adminNote: Optional[str] = None
-    plan: Optional['SubscriptionPlanResponse'] = None
-
-    model_config = ConfigDict(
-        json_encoders={datetime: lambda v: v.isoformat() if v else None}
-    )
-
-class WalletEmbedded(BaseModel):
-    balance: float = Field(default=0.0, ge=0)
-    transactionIds: List[PydanticObjectId] = []
-    transactions: List['TransactionResponse'] = Field(default_factory=list)
-
-    model_config = ConfigDict(
-        json_encoders={datetime: lambda v: v.isoformat() if v else None}
-    )
-
-
-class NotificationsEmbedded(BaseModel):
-    email: bool = False
-    push: bool = False
-    newsletter: bool = False
-
-
-class SubscriptionPlan(Document):
-    name: str = Field(..., unique=True)
-    price: float = Field(ge=0)
-    renewalPeriod: int = Field(default=30, ge=0)
-    features: List[str] = []
-    createdAt: Optional[datetime] = None
-    updatedAt: Optional[datetime] = None
-
-    class Settings:
-        name = "subscriptionplans"
-        use_state_management = True
-        use_revision = True
-        indexes = [
-            IndexModel([("name", 1)], unique=True),
-        ]
-
-    async def before_save(self, *args, **kwargs):
-        if not self.createdAt:
-            self.createdAt = datetime.now(timezone.utc)
-        self.updatedAt = datetime.now(timezone.utc)
-
-
-class SubscriptionPlanResponse(BaseModel):
-    id: str = Field(alias="_id")
-    name: str
-    price: float
-    renewalPeriod: int
-    features: List[str]
-    createdAt: Optional[datetime] = None
-    updatedAt: Optional[datetime] = None
-
-    model_config = ConfigDict(
-        populate_by_name=True,
-        json_encoders={datetime: lambda v: v.isoformat() if v else None},
-        json_schema_extra={
-            "example": {
-                "id": "507f1f77bcf86cd799439011",
-                "name": "Премиум",
-                "price": 999,
-                "renewalPeriod": 30,
-                "features": ["4K", "Без рекламы"],
-                "createdAt": "2023-01-01T00:00:00Z",
-                "updatedAt": "2023-01-02T00:00:00Z"
-            }
-        }
-    )
-
-
-class SubscriptionHistory(Document):
-    userId: PydanticObjectId
-    planId: PydanticObjectId
-    startDate: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    endDate: Optional[datetime] = None  
-    isActive: bool = True
-    autoRenew: bool = True
-    changedByAdmin: bool = False
-    adminNote: Optional[str] = None
-    createdAt: Optional[datetime] = None
-    updatedAt: Optional[datetime] = None
-
-    class Settings:
-        name = "subscriptionhistories"
-        indexes = [
-            IndexModel([("userId", 1)], name="userId_1", background=True),
-            IndexModel([("planId", 1)], name="planId_1", background=True),
-        ]
-        use_state_management = True
-
-    async def before_save(self):
-        if not self.createdAt:
-            self.createdAt = datetime.now(timezone.utc)
-        self.updatedAt = datetime.now(timezone.utc)
-
-
-class SubscriptionHistoryResponse(BaseModel):
-    id: str = Field(alias="_id")
-    userId: PydanticObjectId
-    planId: PydanticObjectId
-    startDate: datetime
-    endDate: Optional[datetime] = None  
-    isActive: bool
-    autoRenew: bool
-    changedByAdmin: bool
-    adminNote: Optional[str] = None
-    createdAt: Optional[datetime] = None
-    updatedAt: Optional[datetime] = None
-    plan: Optional[SubscriptionPlanResponse] = None
-
-    model_config = ConfigDict(
-        populate_by_name=True,
-        json_encoders={datetime: lambda v: v.isoformat() if v else None}
-    )
-    
-class UserStats(Document):
-    userId: PydanticObjectId
-    views: int = Field(default=0, ge=0)
-    ratings: int = Field(default=0, ge=0)
-    favorites: List[PydanticObjectId] = []
-    watchlist: List[PydanticObjectId] = []
-    createdAt: Optional[datetime] = None
-    updatedAt: Optional[datetime] = None
-
-
-    class Settings:
-        name = "userstats"
-        indexes = [
-            IndexModel([("userId", 1)], name="userId_1", unique=True, background=True),
-        ]
-        use_state_management = True
-
-    async def before_save(self):
-        if self.id is None or (self.id is not None and self.get_original_state() is None):
-             if self.createdAt is None:
-                  self.createdAt = datetime.now(timezone.utc)
-        self.updatedAt = datetime.now(timezone.utc)
-
-
-class Transaction(Document):
-    userId: PydanticObjectId
-    amount: float = Field(...)
-    type: str
-    status: str = "pending"
-    description: str = ""
-    paymentMethod: Optional[str] = None
-    currency: str = "RUB"
-    metadata: Optional[Dict[str, Any]] = None
-    date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc)) 
-    
-    createdAt: Optional[datetime] = None
-    updatedAt: Optional[datetime] = None
-
-    @field_validator('amount')
-    @classmethod
-    def amount_cannot_be_zero(cls, v):
-        if v == 0:
-            raise ValueError('Amount cannot be zero')
-        return v
-
-    class Settings:
-        name = "transactions"
-        indexes = [
-            IndexModel([("userId", 1)], name="userId_1", background=True),
-            IndexModel([("userId", 1), ("createdAt", -1)], name="userId_1_createdAt_-1", background=True),
-            IndexModel([("type", 1), ("status", 1)], name="type_1_status_1", background=True),
-            IndexModel([("date", 1)], name="date_1", background=True),
-        ]
-        use_state_management = True
-
-    async def before_save(self):
-        if self.id is None or (self.id is not None and self.get_original_state() is None):
-             if self.createdAt is None:
-                  self.createdAt = datetime.now(timezone.utc)
-        self.updatedAt = datetime.now(timezone.utc)
-
-class TransactionResponse(BaseModel):
-    id: str = Field(alias="_id")
-    userId: PydanticObjectId 
-    amount: float
-    type: str
-    status: str
-    description: str
-    paymentMethod: Optional[str]
-    currency: str
-    metadata: Optional[Dict[str, Any]]
-    date: datetime 
-    createdAt: Optional[datetime] = None
-    updatedAt: Optional[datetime] = None
-
-    model_config = ConfigDict(
-        populate_by_name=True,
-        json_encoders={object: str, datetime: lambda v: v.isoformat()}
-    )
- 
-class PurchaseSubscriptionResponse(BaseModel):
-    success: bool
-    subscription: Optional[SubscriptionHistoryResponse] = None
-    newBalance: Optional[float] = None
-    transaction: Optional[TransactionResponse] = None
-    paymentRequired: bool = False
-    requiredAmount: float = 0
-
-    model_config = ConfigDict(
-        json_encoders={object: str, datetime: lambda v: v.isoformat()},
-        populate_by_name=True 
-    )
-
-class AdminAction(Document):
-    adminId: PydanticObjectId 
-    actionType: str
-    targetModel: str
-    targetId: Optional[PydanticObjectId] = None
-    changes: Optional[Dict[str, Any]] = None
-    ipAddress: Optional[str] = None
-    userAgent: Optional[str] = None
-    additionalInfo: Optional[str] = None
-    createdAt: Optional[datetime] = None
-    updatedAt: Optional[datetime] = None
-
-    class Settings:
-        name = "adminactions"
-        indexes = [
-            IndexModel([("adminId", 1)], name="adminId_1", background=True),
-            IndexModel([("targetModel", 1), ("targetId", 1)], name="targetModel_1_targetId_1", background=True),
-            IndexModel([("createdAt", -1)], name="createdAt_-1", background=True),
-        ]
-        use_state_management = True
-
-    async def before_save(self):
-        if self.id is None or (self.id is not None and self.get_original_state() is None):
-             if self.createdAt is None:
-                  self.createdAt = datetime.now(timezone.utc)
-        self.updatedAt = datetime.now(timezone.utc)
-
-
-class AdminActionResponse(BaseModel):
-    id: str = Field(alias="_id")
-    adminId: PydanticObjectId 
-    actionType: str
-    targetModel: str
-    targetId: Optional[PydanticObjectId]
-    changes: Optional[Dict[str, Any]]
-    ipAddress: Optional[str]
-    userAgent: Optional[str]
-    additionalInfo: Optional[str]
-    createdAt: Optional[datetime] = None
-    updatedAt: Optional[datetime] = None
-    admin: Optional['UserResponseBase'] = None
-
-    model_config = ConfigDict(
-        populate_by_name=True,
-        json_encoders={object: str, datetime: lambda v: v.isoformat()}
-    )
-    
-class User(Document):
-    username: str
-    email: str
-    password: str # Store hashed password!
-    avatar: str = "/defaults/default-avatar.png"
-    notifications: NotificationsEmbedded = Field(default_factory=NotificationsEmbedded)
-    currentSubscription: Optional[CurrentSubscriptionEmbedded] = Field(default_factory=CurrentSubscriptionEmbedded)
-    wallet: WalletEmbedded = Field(default_factory=WalletEmbedded)
-    role: str = Field(default="user", description="User role", examples=["user", "admin"])
-    refreshTokens: List[RefreshTokenEmbedded] = Field(default_factory=list) 
-    createdAt: Optional[datetime] = None
-    updatedAt: Optional[datetime] = None
-
-    class Settings:
-        name = "users"
-        indexes = [
-            IndexModel([("email", 1)], name="email_1", unique=True, background=True),
-            IndexModel([("refreshTokens.createdAt", 1)], name="refreshTokens.createdAt_1", background=True, expireAfterSeconds=604800),
-            IndexModel([("refreshTokens.token", 1)], name="refreshTokens_token_1", background=True),
-        ]
-        use_state_management = True
-
-    async def before_save(self):
-        if self.id is None or (self.id is not None and self.get_original_state() is None):
-             if self.createdAt is None:
-                  self.createdAt = datetime.now(timezone.utc)
-        self.updatedAt = datetime.now(timezone.utc)
-
-class UserResponseBase(BaseModel):
-    id: str = Field(alias="_id")
-    username: str
-    email: Optional[str] = None 
-    avatar: str
-    notifications: NotificationsEmbedded
-    createdAt: Optional[datetime] = None
-    updatedAt: Optional[datetime] = None
-    role: str
-    currentSubscription: Optional[CurrentSubscriptionEmbedded] = None 
-    wallet: WalletEmbedded = Field(default_factory=WalletEmbedded)
-    history: List[SubscriptionHistoryResponse] = Field(default_factory=list) 
-    model_config = ConfigDict(
-        populate_by_name=True,
-        json_encoders={object: str, datetime: lambda v: v.isoformat()}
-    )
 
 # Рекурсивные ссылки в Pydantic моделях
 SubscriptionPlanResponse.model_rebuild()
@@ -714,157 +403,6 @@ app.mount("/public", StaticFiles(directory=static_files_dir), name="static")
 AVATAR_UPLOAD_DIR = static_files_dir / "uploads" / "avatars"
 os.makedirs(AVATAR_UPLOAD_DIR, exist_ok=True)
 
-
-class CreateUserRequest(BaseModel):
-    username: str = Field(min_length=1)
-    email: EmailStr
-    password: str = Field(min_length=8)
-    confirmPassword: str
-    notifications: Optional[NotificationsEmbedded] = Field(default_factory=NotificationsEmbedded)
-
-    @field_validator('confirmPassword')
-    @classmethod
-    def passwords_match(cls, v: str, info: ValidationInfo) -> str: 
-        if 'password' in info.data and v != info.data['password']: 
-            raise ValueError('Пароли не совпадают')
-        return v
-
-
-class LoginUserRequest(BaseModel):
-    email: EmailStr
-    password: str
-
-class UpdateUserRequest(BaseModel):
-    username: Optional[str] = Field(None, min_length=1)
-    email: Optional[EmailStr] = None
-    currentPassword: str = Field(min_length=1)
-    newPassword: Optional[str] = Field(None, min_length=8)
-
-    @field_validator('newPassword')
-    @classmethod
-    def new_password_length_check(cls, v):
-        return v
-
-class RefreshTokenRequest(BaseModel):
-    refreshToken: str
-
-class DepositWalletRequest(BaseModel):
-    amount: float = Field(gt=0)
-    paymentMethod: str = 'manual'
-
-class WithdrawWalletRequest(BaseModel):
-    amount: float = Field(gt=0)
-    description: Optional[str] = ''
-
-class PurchaseSubscriptionRequest(BaseModel):
-    planId: PydanticObjectId
-
-class AdminChangeUserRequest(BaseModel):
-    username: Optional[str] = Field(None, min_length=1, max_length=50)
-    email: Optional[str] = None  
-    wallet: Optional[Dict[str, Any]] = None
-    currentSubscription: Optional[Dict[str, Any]] = None
-
-    @field_validator('username')
-    @classmethod
-    def validate_username(cls, v):
-        if v is not None and len(v.strip()) < 1:
-            raise ValueError("Username cannot be empty")
-        return v
-
-    @field_validator('email')
-    @classmethod
-    def validate_email(cls, v):
-        if v is not None:
-            try:
-                from pydantic import EmailStr
-                class EmailCheck(BaseModel):
-                    email: EmailStr
-                EmailCheck(email=v)
-            except ValueError:
-                raise ValueError("Invalid email format")
-        return v
-
-    @field_validator('wallet')
-    @classmethod
-    def validate_wallet(cls, v):
-        if v is not None:
-            if 'balance' in v:
-                try:
-                    v['balance'] = float(v['balance'])
-                except (TypeError, ValueError):
-                    raise ValueError("Wallet balance must be a number")
-        return v
-
-    @field_validator('currentSubscription')
-    @classmethod
-    def validate_subscription(cls, v):
-        if v is not None:
-            if 'planId' in v and v['planId']:
-                try:
-                    v['planId'] = PydanticObjectId(v['planId'])
-                except:
-                    raise ValueError("Invalid planId format")
-            
-            if 'endDate' in v and v['endDate']:
-                try:
-                    if isinstance(v['endDate'], str):
-                        v['endDate'] = datetime.fromisoformat(v['endDate'].replace("Z", "+00:00"))
-                except ValueError:
-                    raise ValueError("Invalid endDate format")
-        return v
-
-
-class AdminChangePlanRequest(BaseModel):
-    name: str = Field(
-        ..., 
-        min_length=1, 
-        max_length=100,
-        description="Название тарифного плана",
-        examples=["Премиум"]
-    )
-    price: float = Field(
-        ...,  
-        ge=0,
-        description="Цена подписки",
-        examples=[999]
-    )
-    renewalPeriod: int = Field(
-        default=30,  
-        ge=1,
-        description="Период подписки в днях",
-        examples=[30]
-    )
-    features: List[str] = Field(
-        default_factory=list,
-        description="Список возможностей подписки",
-        examples=[["4K качество", "Без рекламы"]]
-    )
-
-    model_config = ConfigDict(
-        json_schema_extra={
-            "example": {
-                "name": "Премиум+",
-                "price": 1199,
-                "renewalPeriod": 30,
-                "features": ["4K", "Без рекламы", "Оффлайн просмотр"]
-            }
-        }
-    )
-
-    @field_validator('name')
-    @classmethod
-    def validate_name(cls, v):
-        if not v or len(v.strip()) < 1:
-            raise ValueError("Название плана не может быть пустым")
-        return v.strip()
-
-    @field_validator('price')
-    @classmethod
-    def validate_price(cls, v):
-        if v < 0:
-            raise ValueError("Цена не может быть отрицательной")
-        return round(v, 2)
 
 @app.post('/api/create/user', status_code=status.HTTP_201_CREATED)
 async def create_user(request_data: CreateUserRequest):
@@ -1461,76 +999,88 @@ async def get_plan_by_id(planId: PydanticObjectId):
         logger.error(f'Ошибка при получении тарифного плана по ID {planId}: {err}', exc_info=True)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail='Ошибка сервера при получении тарифного плана')
 
-@app.post('/api/subscriptions/purchase')
+@app.post('/api/subscriptions/purchase', response_model=PurchaseSubscriptionResponse)
 async def purchase_subscription(
     request_data: PurchaseSubscriptionRequest,
     current_user: User = Depends(get_current_user)
 ):
     if motor_client is None:
-        return JSONResponse(
-            content={"detail": "Database unavailable"},
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Database unavailable"
         )
 
     client = motor_client
     async with await client.start_session() as session:
         try:
             async with session.start_transaction():
+                # Получаем пользователя и план
                 user = await User.get(current_user.id, session=session)
-                if not user:
-                    raise HTTPException(status_code=404, detail="User not found")
-
                 plan = await SubscriptionPlan.get(request_data.planId, session=session)
-                if not plan:
-                    raise HTTPException(status_code=404, detail="Plan not found")
+                
+                if not user or not plan:
+                    raise HTTPException(status_code=404, detail="User or plan not found")
 
-                now_utc = datetime.now(timezone.utc)
-                response_data = {
-                    "success": True,
-                    "paymentRequired": False,
-                    "requiredAmount": 0
-                }
+                now = datetime.now(timezone.utc)
+                
+                # Обработка бесплатного плана
                 if plan.price == 0:
-                    subscription_data = {
-                        "planId": str(plan.id),
-                        "startDate": now_utc.isoformat(),
-                        "endDate": None,
-                        "isActive": True,
-                        "autoRenew": False,
-                        "plan": {
-                            "id": str(plan.id),
-                            "name": plan.name,
-                            "price": plan.price,
-                            "renewalPeriod": plan.renewalPeriod, 
-                            "features": plan.features,
-                            "createdAt": now_utc,
-                            "updatedAt": now_utc
-                        }
-                    }
-                    user.currentSubscription = CurrentSubscriptionEmbedded(**subscription_data)
+                    subscription_data = CurrentSubscriptionEmbedded(
+                        planId=plan.id,
+                        startDate=now,
+                        endDate=None,
+                        isActive=True,
+                        autoRenew=False,
+                        plan=SubscriptionPlanResponse(
+                            id=str(plan.id),
+                            name=plan.name,
+                            price=plan.price,
+                            renewalPeriod=plan.renewalPeriod,
+                            features=plan.features,
+                            createdAt=plan.createdAt,
+                            updatedAt=plan.updatedAt
+                        )
+                    )
+                    
+                    user.currentSubscription = subscription_data
                     await user.save(session=session)
                     
-                    response_data.update({
-                        "subscription": subscription_data,
-                        "newBalance": user.wallet.balance,
-                        "transaction": None
-                    })
-                    await session.commit_transaction()
-                    return response_data
+                    return PurchaseSubscriptionResponse(
+                        success=True,
+                        subscription=SubscriptionHistoryResponse(
+                            id=str(user.id),  # Временное значение, нужно создать реальную запись
+                            userId=user.id,
+                            planId=plan.id,
+                            startDate=now,
+                            endDate=None,
+                            isActive=True,
+                            autoRenew=False,
+                            changedByAdmin=False,
+                            plan=SubscriptionPlanResponse(
+                                id=str(plan.id),
+                                name=plan.name,
+                                price=plan.price,
+                                renewalPeriod=plan.renewalPeriod,
+                                features=plan.features,
+                                createdAt=plan.createdAt,
+                                updatedAt=plan.updatedAt
+                            )
+                        ),
+                        newBalance=user.wallet.balance,
+                        paymentRequired=False,
+                        requiredAmount=0
+                    )
 
-                required_amount = plan.price - user.wallet.balance
+                # Проверка баланса для платных планов
                 if user.wallet.balance < plan.price:
-                    await session.abort_transaction()
-                    return {
-                        'paymentRequired': True,
-                        'requiredAmount': required_amount,
-                        'success': False,
-                        'newBalance': user.wallet.balance
-                    }
+                    return PurchaseSubscriptionResponse(
+                        success=False,
+                        paymentRequired=True,
+                        requiredAmount=plan.price - user.wallet.balance,
+                        newBalance=user.wallet.balance
+                    )
                 
-                
-                now=datetime.now(timezone.utc)
-                
+                # Создаем транзакцию
                 transaction = Transaction(
                     userId=user.id,
                     amount=-plan.price,
@@ -1539,89 +1089,117 @@ async def purchase_subscription(
                     description=f"Оплата подписки {plan.name}",
                     paymentMethod='balance',
                     currency='RUB',
-                    metadata={
-                        "planId": plan.id,
-                        "planName": plan.name
+                    metadata={  # Добавляем обязательное поле metadata
+                        "planId": str(plan.id),
+                        "planName": plan.name,
+                        "type": "subscription_payment"
                     },
-                    date=now_utc,
-                    createdAt=now_utc,
-                    updatedAt=now_utc
+                    date=now,
+                    createdAt=now,
+                    updatedAt=now
                 )
                 await transaction.insert(session=session)
 
+                # Обновляем баланс пользователя
                 user.wallet.balance -= plan.price
                 user.wallet.transactionIds.append(transaction.id)
 
+                # Создаем запись в истории подписок
                 renewal_days = plan.renewalPeriod or 30
-                start_date = now_utc
-                end_date = now_utc + timedelta(days=renewal_days)
-
+                end_date = now + timedelta(days=renewal_days)
+                
                 subscription_history = SubscriptionHistory(
                     userId=user.id,
                     planId=plan.id,
-                    startDate=start_date,
+                    startDate=now,
                     endDate=end_date,
                     isActive=True,
                     autoRenew=True,
                     changedByAdmin=False,
                     adminNote="Покупка через баланс",
-                    plan=plan,
-                    createdAt=now_utc,
-                    updatedAt=now_utc
+                    createdAt=now,
+                    updatedAt=now
                 )
                 await subscription_history.insert(session=session)
 
-                subscription_data = {
-                    "planId": str(plan.id),
-                    "startDate": start_date,
-                    "endDate": end_date,
-                    "isActive": True,
-                    "autoRenew": True,
-                    "plan": {
-                        "id": str(plan.id),
-                        "name": plan.name,
-                        "price": plan.price,
-                        "features": plan.features,
-                        "renewalPeriod": plan.renewalPeriod
-                    }
-                }
-                user.currentSubscription = CurrentSubscriptionEmbedded(**subscription_data)
+                # Обновляем текущую подписку пользователя
+                user.currentSubscription = CurrentSubscriptionEmbedded(
+                    planId=plan.id,
+                    startDate=now,
+                    endDate=end_date,
+                    isActive=True,
+                    autoRenew=True,
+                    plan=SubscriptionPlanResponse(
+                        id=str(plan.id),
+                        name=plan.name,
+                        price=plan.price,
+                        renewalPeriod=plan.renewalPeriod,
+                        features=plan.features,
+                        createdAt=plan.createdAt,
+                        updatedAt=plan.updatedAt
+                    )
+                )
                 await user.save(session=session)
 
-                response_data.update({
-                    "subscription": {
-                        **subscription_data,
-                        "startDate": start_date.isoformat(),
-                        "endDate": end_date.isoformat()
-                    },
-                    "newBalance": user.wallet.balance,
-                    "transaction": {
-                        "id": str(transaction.id),
-                        "amount": transaction.amount,
-                        "type": transaction.type,
-                        "date": transaction.date.isoformat(),
-                        "description": transaction.description
-                    }
-                })
+                # Формируем ответ
+                response = PurchaseSubscriptionResponse(
+                    success=True,
+                    subscription=SubscriptionHistoryResponse(
+                        id=str(subscription_history.id),
+                        userId=user.id,
+                        planId=plan.id,
+                        startDate=now,
+                        endDate=end_date,
+                        isActive=True,
+                        autoRenew=True,
+                        changedByAdmin=False,
+                        createdAt=now,
+                        updatedAt=now,
+                        plan=SubscriptionPlanResponse(
+                            id=str(plan.id),
+                            name=plan.name,
+                            price=plan.price,
+                            renewalPeriod=plan.renewalPeriod,
+                            features=plan.features,
+                            createdAt=plan.createdAt,
+                            updatedAt=plan.updatedAt
+                        )
+                    ),
+                    newBalance=user.wallet.balance,
+                    transaction=TransactionResponse(
+                        id=str(transaction.id),
+                        userId=user.id,
+                        amount=transaction.amount,
+                        type=transaction.type,
+                        status=transaction.status,
+                        description=transaction.description,
+                        paymentMethod=transaction.paymentMethod,
+                        currency=transaction.currency,
+                        metadata=transaction.metadata,  # Добавляем metadata
+                        date=transaction.date,
+                        createdAt=transaction.createdAt,
+                        updatedAt=transaction.updatedAt
+                    ),
+                    paymentRequired=False,
+                    requiredAmount=0
+                )
 
                 await session.commit_transaction()
-                return response_data
+                return response
 
         except HTTPException as http_exc:
             if session.in_transaction:
                 await session.abort_transaction()
             raise http_exc
-            
         except Exception as err:
+            logger.error(f"Subscription purchase error: {str(err)}", exc_info=True)
             if session.in_transaction:
                 await session.abort_transaction()
-            logger.error(f"Subscription purchase error: {str(err)}", exc_info=True)
             raise HTTPException(
                 status_code=500,
                 detail="Internal server error during subscription purchase"
             )
-            
-    
+              
 @app.get('/api/subscriptions/current')
 async def get_current_subscription(current_user: User = Depends(get_current_user)):
     try:

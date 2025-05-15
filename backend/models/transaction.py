@@ -1,7 +1,8 @@
 from datetime import datetime, timezone
 from typing import Optional, Dict, Any
 from pydantic import Field, BaseModel, ConfigDict, field_validator
-from beanie import Document, PydanticObjectId, IndexModel
+from beanie import Document, PydanticObjectId
+from pymongo import IndexModel
 
 
 

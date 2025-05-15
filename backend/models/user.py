@@ -1,8 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Dict, Any, Union
-from pydantic import Field, BaseModel, ConfigDict, field_validator, EmailStr
-from pydantic.functional_validators import ValidationInfo
-from beanie import Document, PydanticObjectId, Link, IndexModel
+from pydantic import Field, BaseModel, ConfigDict, field_validator, EmailStr,ValidationInfo
+from beanie import Document, PydanticObjectId, Link
 from pymongo import IndexModel
 from pathlib import Path
 import pytz
