@@ -31,28 +31,7 @@ import aiofiles
 import aiofiles.os 
 import re
 import math 
-def convert_objectids_to_str(data):
-    """Рекурсивно преобразует экземпляры PydanticObjectId в строки в словарях и списках."""
-    if isinstance(data, PydanticObjectId):
-        return str(data)
-    if isinstance(data, dict):
-        return {key: convert_objectids_to_str(value) for key, value in data.items()}
-    if isinstance(data, list):
-        return [convert_objectids_to_str(item) for item in data]
-    return data
 
-
-
-def check_nested_types(data, path="."):
-    """Рекурсивно проверяет типы данных и выводит PydanticObjectId."""
-    if isinstance(data, PydanticObjectId):
-        print(f"!!! Found PydanticObjectId at path: {path}") 
-    elif isinstance(data, dict):
-        for key, value in data.items():
-            check_nested_types(value, f"{path}.{key}")
-    elif isinstance(data, list):
-        for index, item in enumerate(data):
-            check_nested_types(item, f"{path}[{index}]")
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -834,6 +813,8 @@ class AdminChangeUserRequest(BaseModel):
                 except ValueError:
                     raise ValueError("Invalid endDate format")
         return v
+
+
 class AdminChangePlanRequest(BaseModel):
     name: str = Field(
         ..., 
