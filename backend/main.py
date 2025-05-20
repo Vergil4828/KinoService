@@ -1,4 +1,14 @@
 from __future__ import annotations
+from backend.core.config import (
+    logger,
+    PORT,
+    ALLOWED_ORIGINS,
+    PUBLIC_DIR,
+    AVATAR_UPLOAD_DIR,
+    JWT_SECRET_KEY, # <-- Добавьте это
+    REFRESH_SECRET_KEY, # <-- Добавьте это (если используется для токенов обновления)
+    JWT_ALGORITHM # <-- Добавьте это
+)
 import os
 import logging
 from dotenv import load_dotenv
@@ -33,7 +43,7 @@ import aiofiles.os
 import re
 import math 
 
-from models import (
+from backend.models import (
     User,
     SubscriptionPlan,
     SubscriptionHistory,
@@ -41,14 +51,14 @@ from models import (
     Transaction,
     AdminAction
 )
-from models.embedded import (
+from backend.models.embedded import (
     RefreshTokenEmbedded,
     CurrentSubscriptionEmbedded,
     SubscriptionHistoryEmbedded,
     WalletEmbedded,
     NotificationsEmbedded
 )
-from schemas import (
+from backend.schemas import (
     SubscriptionPlanResponse,
     SubscriptionHistoryResponse,
     TransactionResponse,
@@ -67,54 +77,22 @@ from schemas import (
 )
 
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
-
-script_dir = Path(__file__).parent
-project_root = script_dir.parent
-dotenv_path = project_root / ".env"
-
-load_dotenv(dotenv_path=dotenv_path)
 
 
 app = FastAPI()
 
-PORT = os.getenv("PORT") 
-SECRET_KEY = os.getenv("JWT_SECRET")
-REFRESH_KEY = os.getenv("REFRESH_SECRET")
-MONGO_URI = os.getenv("MONGO_URI")
-JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
-
-
-if not SECRET_KEY:
-    logger.error("Переменная окружения JWT_SECRET не установлена!")
-    exit(1)
-if not REFRESH_KEY:
-    logger.error("Переменная окружения REFRESH_SECRET не установлена!")
-    exit(1)
-if not MONGO_URI and not os.getenv("MONGO_DB_NAME"):
-    logger.error("Переменные окружения MONGO_URI или MONGO_DB_NAME не установлены!")
-    exit(1)
-
-
-allowed_origins = [
-    'https://vosmerka228.ru',
-    'https://api.vosmerka228.ru',
-    'http://localhost:5173',
-    'https://m.vosmerka228.ru'
-]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization", "x-access-token"],
 )
 
 
-# Рекурсивные ссылки в Pydantic моделях
+
 SubscriptionPlanResponse.model_rebuild()
 SubscriptionHistoryEmbedded.model_rebuild()
 CurrentSubscriptionEmbedded.model_rebuild()
@@ -301,8 +279,8 @@ def generate_tokens(user: User):
         "exp": datetime.now(timezone.utc) + refresh_token_expires
     }
 
-    access_token = jwt.encode(access_payload, SECRET_KEY, algorithm=JWT_ALGORITHM)
-    refresh_token = jwt.encode(refresh_payload, REFRESH_KEY, algorithm=JWT_ALGORITHM)
+    access_token = jwt.encode(access_payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
+    refresh_token = jwt.encode(refresh_payload, REFRESH_SECRET_KEY, algorithm=JWT_ALGORITHM)
 
     return {
         "accessToken": access_token, 
@@ -332,7 +310,7 @@ async def get_current_user(request: Request) -> User:
         )
 
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[JWT_ALGORITHM])
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
         user_id: str = payload.get("userId")
         if user_id is None:
             raise HTTPException(
@@ -400,14 +378,9 @@ async def log_admin_action(
     except Exception as err:
         logger.error(f'Ошибка при записи действия администратора: {err}', exc_info=True)
 
-static_files_dir = project_root / "public"
-if not os.path.isdir(static_files_dir):
-     logger.warning(f"Директория статических файлов не найдена: {static_files_dir}. Статические файлы могут быть недоступны.")
 
-app.mount("/public", StaticFiles(directory=static_files_dir), name="static")
+app.mount("/public", StaticFiles(directory=PUBLIC_DIR), name="static")
 
-AVATAR_UPLOAD_DIR = static_files_dir / "uploads" / "avatars"
-os.makedirs(AVATAR_UPLOAD_DIR, exist_ok=True)
 
 
 @app.post('/api/create/user', status_code=status.HTTP_201_CREATED)
@@ -777,7 +750,7 @@ async def upload_avatar(avatar: UploadFile = File(...), current_user: User = Dep
 
         if current_user.avatar and current_user.avatar.startswith('/public/uploads/avatars/'):
              old_avatar_relative_path = current_user.avatar.replace("/public/", "", 1)
-             old_avatar_full_path = project_root / "public" / old_avatar_relative_path
+             old_avatar_full_path = PUBLIC_DIR / old_avatar_relative_path
 
              if old_avatar_full_path.exists() and old_avatar_full_path != file_path:
                  try:

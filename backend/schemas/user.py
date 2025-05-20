@@ -58,12 +58,12 @@ class UpdateUserRequest(BaseModel):
         return v
 
 
-и
+
 try:
-    from models.embedded.notification import NotificationsEmbedded
-    from models.embedded.subscription import CurrentSubscriptionEmbedded
-    from models.embedded.wallet import WalletEmbedded
-    from schemas.subscription import SubscriptionHistoryResponse, SubscriptionPlanResponse
+    from backend.models.embedded.notification import NotificationsEmbedded
+    from backend.models.embedded.subscription import CurrentSubscriptionEmbedded
+    from backend.models.embedded.wallet import WalletEmbedded
+    from backend.schemas.subscription import SubscriptionHistoryResponse, SubscriptionPlanResponse
     
     UserResponseBase.model_rebuild() 
     CreateUserRequest.model_rebuild()

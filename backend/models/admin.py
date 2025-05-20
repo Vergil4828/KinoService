@@ -6,9 +6,6 @@ from beanie import Document, PydanticObjectId
 from pymongo import IndexModel
 from pydantic import field_validator
 
-from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from .user import UserResponseBase
 
 class AdminAction(Document):
     adminId: PydanticObjectId 

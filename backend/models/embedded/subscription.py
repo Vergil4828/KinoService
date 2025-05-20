@@ -5,7 +5,7 @@ from pydantic import Field, BaseModel, ConfigDict, field_validator
 from beanie import Document, PydanticObjectId
 from pymongo import IndexModel
 
-from schemas.subscription import SubscriptionPlanResponse
+from backend.schemas.subscription import SubscriptionPlanResponse
 
 
 class SubscriptionHistoryEmbedded(BaseModel):

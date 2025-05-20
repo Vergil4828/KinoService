@@ -7,10 +7,10 @@ from pymongo import IndexModel
 from pathlib import Path
 import pytz
 
-from models.embedded.notification import NotificationsEmbedded
-from models.embedded.wallet import WalletEmbedded
-from models.embedded.subscription import CurrentSubscriptionEmbedded
-from models.embedded.token import RefreshTokenEmbedded
+from backend.models.embedded.notification import NotificationsEmbedded
+from backend.models.embedded.wallet import WalletEmbedded
+from backend.models.embedded.subscription import CurrentSubscriptionEmbedded
+from backend.models.embedded.token import RefreshTokenEmbedded
 
 class User(Document):
     username: str

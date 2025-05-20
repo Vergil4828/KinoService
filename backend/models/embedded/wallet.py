@@ -4,7 +4,7 @@ from typing import Optional, List
 from pydantic import Field, BaseModel, ConfigDict
 from beanie import PydanticObjectId
 
-from schemas.transaction import TransactionResponse
+from backend.schemas.transaction import TransactionResponse
 
 
 class WalletEmbedded(BaseModel):

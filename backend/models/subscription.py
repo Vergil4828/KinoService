@@ -7,7 +7,7 @@ from pymongo import IndexModel
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from schemas.transaction import TransactionResponse  
+    from backend.schemas.transaction import TransactionResponse  
 
 
 class SubscriptionPlan(Document):
