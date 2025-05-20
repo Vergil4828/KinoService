@@ -9,6 +9,10 @@ from backend.core.config import (
     REFRESH_SECRET_KEY, # <-- Добавьте это (если используется для токенов обновления)
     JWT_ALGORITHM # <-- Добавьте это
 )
+from backend.core.database import init_db
+from backend.core.tasks import init_scheduler
+from backend.core.dependencies import get_current_user, get_admin_user, log_admin_action, generate_tokens
+from backend.core.database import get_motor_client
 import os
 import logging
 from dotenv import load_dotenv
@@ -105,278 +109,8 @@ UserResponseBase.model_rebuild()
 
 
 
-motor_client: Optional[AsyncIOMotorClient] = None
-
-async def init_db():
-    logger.info("--- TEST LOG: init_db начала выполнение ---")
-    logger.info("Попытка подключения к MongoDB...")
-    try:
-        script_dir = Path(__file__).parent
-        project_root = script_dir.parent
-        dotenv_path = project_root / ".env"
-        logger.info(f"Ожидаемый путь к .env: {dotenv_path}")
-
-        load_dotenv(dotenv_path=dotenv_path)
-
-        loaded_mongo_uri = os.getenv("MONGO_URI")
-        logger.info(f"Загруженное значение MONGO_URI: {loaded_mongo_uri}")
-
-        loaded_mongo_db_name = os.getenv("MONGO_DB_NAME")
-        logger.info(f"Загруженное значение MONGO_DB_NAME: {loaded_mongo_db_name}")
 
 
-        global motor_client
-        motor_client = AsyncIOMotorClient(loaded_mongo_uri, serverSelectionTimeoutMS=5000)
-
-
-        await motor_client.admin.command('ping')
-        logger.info("Подключение к MongoDB успешно установлено")
-
-        db_name = loaded_mongo_db_name
-
-        if not db_name:
-            try:
-                db_name = motor_client.get_default_database().name
-                logger.info("Получено имя базы данных из MONGO_URI")
-            except ConfigurationError:
-                logger.error("MONGO_URI не содержит имя базы данных, и переменная окружения MONGO_DB_NAME не установлена.")
-                raise ConfigurationError("No default database name defined or provided in MONGO_URI or MONGO_DB_NAME environment variable.")
-        else:
-             logger.info(f"Получено имя базы данных из MONGO_DB_NAME: {db_name}")
-
-
-        logger.info(f"Подключение к базе данных: {db_name}")
-
-
-        await init_beanie(database=motor_client[db_name], document_models=[
-            User,
-            SubscriptionPlan,
-            SubscriptionHistory,
-            UserStats,
-            Transaction,
-            AdminAction,
-        ])
-        logger.info("Успешное подключение к MongoDB и инициализация Beanie")
-
-        await initSubscriptionPlans()
-
-        scheduler = AsyncIOScheduler()
-        scheduler.add_job(checkAndUpdateSubscriptions, 'interval', minutes=1)
-        scheduler.start()
-        logger.info('Cron-задача для проверки подписок активирована')
-
-    except ServerSelectionTimeoutError as sste:
-        logger.error(f"Ошибка подключения к MongoDB: Таймаут подключения к серверу. Проверьте, запущен ли MongoDB и доступен ли он по адресу {loaded_mongo_uri}.", exc_info=True)
-        exit(1)
-    except ConfigurationError as ce:
-         logger.error(f"Ошибка конфигурации базы данных: {ce}", exc_info=True)
-         exit(1)
-    except Exception as e:
-        logger.error(f"Неожиданная ошибка подключения к MongoDB или инициализации: {e}", exc_info=True)
-        exit(1)
-
-
-async def initSubscriptionPlans():
-    logger.info("Проверка и инициализация тарифных планов...")
-    try:
-        plans_count = await SubscriptionPlan.count()
-
-        if plans_count > 0:
-            logger.info('Тарифные планы уже существуют, инициализация не требуется')
-            return
-
-        plans_data = [
-            {"name": "Базовый", "price": 0, "renewalPeriod": 30, "features": ["Full HD качество", "1 устройство", "С рекламой"]},
-            {"name": "Популярный", "price": 899, "renewalPeriod": 30, "features": ["4K Ultra HD + HDR", "До 5 устройств", "Без рекламы", "Оффлайн просмотр"]},
-            {"name": "Премиум+", "price": 1199, "renewalPeriod": 30, "features": ["4K Ultra HD + HDR + Dolby Vision", "До 7 устройств", "Без рекламы + ранний доступ", "Оффлайн-просмотр + эксклюзивы"]}
-        ]
-
-        plan_documents = [SubscriptionPlan(**plan) for plan in plans_data]
-        await SubscriptionPlan.insert_many(plan_documents)
-        logger.info(f'Тарифные планы успешно инициализированы: {len(plan_documents)} добавлено')
-
-    except Exception as e:
-        logger.error(f'Ошибка при инициализации тарифных планов: {e}', exc_info=True)
-
-
-
-async def checkAndUpdateSubscriptions():
-    """
-    Checks for expired subscriptions and moves users to the basic plan.
-    Uses MongoDB transactions.
-    """
-    if motor_client is None:
-         logger.error("Ошибка при проверки подписок: Клиент MongoDB не инициализирован. Задача пропущена.")
-         return
-
-    client = motor_client
-
-    async with await client.start_session() as session:
-        async with session.start_transaction():
-            try:
-                now_utc = datetime.now(timezone.utc)
-                logger.info(f"[{now_utc.isoformat()}] Запуск проверки подписок...")
-
-                users_to_update = await User.find({
-                    'currentSubscription.endDate': {
-                        '$lte': now_utc,
-                        '$ne': None
-                    },
-                    'currentSubscription.isActive': True
-                }, session=session).to_list()
-
-                logger.info(f"Найдено {len(users_to_update)} пользователей для обновления")
-
-                basic_plan = await SubscriptionPlan.find_one(SubscriptionPlan.price == 0, session=session)
-                if not basic_plan:
-                    raise Exception('Базовый тарифный план не найден')
-
-                for user in users_to_update:
-                    if user.currentSubscription and user.currentSubscription.planId:
-                         history_entry = SubscriptionHistory(
-                              userId=user.id,
-                              planId=user.currentSubscription.planId,
-                              startDate=user.currentSubscription.startDate or datetime.now(timezone.utc),
-                              endDate=now_utc,
-                              isActive=False,
-                              autoRenew=user.currentSubscription.autoRenew
-                         )
-                         await history_entry.insert(session=session)
-                         logger.info(f"История подписки пользователя {user.id} добавлена в отдельную коллекцию")
-
-                    user.currentSubscription = CurrentSubscriptionEmbedded(
-                         planId=basic_plan.id,
-                         startDate=datetime.now(timezone.utc),
-                         endDate=None,
-                         isActive=True,
-                         autoRenew=False
-                    )
-
-                    await user.save(session=session)
-                    logger.info(f"Пользователь {user.id} переведен на базовый тариф")
-
-                await session.commit_transaction()
-                logger.info('Проверка подписок завершена успешно')
-
-            except Exception as error:
-                await session.abort_transaction()
-                logger.error(f'Ошибка при проверке подписок: {error}', exc_info=True)
-
-
-def generate_tokens(user: User):
-    access_token_expires = timedelta(minutes=15)
-    refresh_token_expires = timedelta(days=7)
-    
-    access_payload = {
-        "userId": str(user.id), 
-        "role": user.role,
-        "exp": datetime.now(timezone.utc) + access_token_expires
-    }
-    
-    refresh_payload = {
-        "userId": str(user.id), 
-        "role": user.role,
-        "exp": datetime.now(timezone.utc) + refresh_token_expires
-    }
-
-    access_token = jwt.encode(access_payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
-    refresh_token = jwt.encode(refresh_payload, REFRESH_SECRET_KEY, algorithm=JWT_ALGORITHM)
-
-    return {
-        "accessToken": access_token, 
-        "refreshToken": refresh_token
-    }
-
-
-async def get_current_user(request: Request) -> User:
-    """FastAPI Dependency to get the current authenticated user."""
-    auth_header = request.headers.get('Authorization')
-    x_access_token = request.headers.get('x-access-token')
-    token = None
-    if auth_header:
-         try:
-              scheme, param = auth_header.split()
-              if scheme.lower() == 'bearer':
-                   token = param
-         except ValueError: pass
-    elif x_access_token:
-         token = x_access_token
-
-    if not token:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Нет токена",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    try:
-        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
-        user_id: str = payload.get("userId")
-        if user_id is None:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Неверный токен (нет userId)",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-        user = await User.get(PydanticObjectId(user_id))
-        if user is None:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Пользователь не найден",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-        return user
-    except JWTError:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Неверный или просроченный токен доступа",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    except Exception as e:
-        logger.error(f"Ошибка в get_current_user: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Внутренняя ошибка сервера при аутентификации",
-        )
-
-async def get_admin_user(current_user: User = Depends(get_current_user)):
-    """FastAPI Dependency to check if the authenticated user is an admin."""
-    if current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Доступ только для администраторов",
-        )
-    return current_user
-
-
-
-async def log_admin_action(
-    admin_user: User,
-    request: Request,
-    action_type: str,
-    target_model: str,
-    target_id: Optional[PydanticObjectId] = None,
-    changes: Optional[Dict[str, Any]] = None,
-    additional_info: Optional[str] = None
-):
-    now_utc = datetime.now(timezone.utc)
-    """Logs an administrative action."""
-    try:
-        admin_action = AdminAction(
-            adminId=admin_user.id,
-            actionType=action_type,
-            targetModel=target_model,
-            targetId=target_id,
-            changes=changes,
-            ipAddress=request.client.host if request.client else None,
-            userAgent=request.headers.get('user-agent'),
-            additionalInfo=additional_info,
-            createdAt=now_utc,
-            updatedAt=now_utc
-        )
-        await admin_action.insert()
-    except Exception as err:
-        logger.error(f'Ошибка при записи действия администратора: {err}', exc_info=True)
 
 
 app.mount("/public", StaticFiles(directory=PUBLIC_DIR), name="static")
@@ -678,7 +412,7 @@ async def refresh_access_token(request: Request):
             )
 
         try:
-            payload = jwt.decode(refresh_token, REFRESH_KEY, algorithms=[JWT_ALGORITHM])
+            payload = jwt.decode(refresh_token, REFRESH_SECRET_KEY, algorithms=[JWT_ALGORITHM])
             user_id = payload.get("userId")
             
             if payload.get("exp", 0) < datetime.now(timezone.utc).timestamp():
@@ -825,11 +559,14 @@ async def get_wallet_data(current_user: User = Depends(get_current_user)):
 
 @app.post('/api/wallet/deposit')
 async def deposit_wallet(request_data: DepositWalletRequest, current_user: User = Depends(get_current_user)):
-    if motor_client is None:
-         logger.error("Ошибка при пополнении кошелька: Клиент MongoDB не инициализирован.")
-         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail='Ошибка сервера: База данных недоступна')
+    try:
+        # ИСПРАВЛЕНИЕ: Получаем клиент через функцию get_motor_client()
+        client = get_motor_client()
+    except RuntimeError as e:
+        logger.error(f"Ошибка при пополнении кошелька: {e}. Клиент MongoDB не инициализирован.", exc_info=False)
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail='Ошибка сервера: База данных недоступна')
 
-    client = motor_client
+    
     async with await client.start_session() as session:
         async with session.start_transaction():
             try:
@@ -878,11 +615,12 @@ async def deposit_wallet(request_data: DepositWalletRequest, current_user: User 
 
 @app.post('/api/wallet/withdraw')
 async def withdraw_wallet(request_data: WithdrawWalletRequest, current_user: User = Depends(get_current_user)):
-    if motor_client is None:
-         logger.error("Ошибка при списании средств: Клиент MongoDB не инициализирован.")
-         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail='Ошибка сервера: База данных недоступна')
-
-    client = motor_client
+    try:
+        # ИСПРАВЛЕНИЕ: Получаем клиент через функцию get_motor_client()
+        client = get_motor_client()
+    except RuntimeError as e:
+        logger.error(f"Ошибка при списании средств: {e}. Клиент MongoDB не инициализирован.", exc_info=False)
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail='Ошибка сервера: База данных недоступна')
     async with await client.start_session() as session:
         async with session.start_transaction():
             try:
@@ -983,13 +721,13 @@ async def purchase_subscription(
     request_data: PurchaseSubscriptionRequest,
     current_user: User = Depends(get_current_user)
 ):
-    if motor_client is None:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Database unavailable"
-        )
+    try:
+        # ИСПРАВЛЕНИЕ: Получаем клиент через функцию get_motor_client()
+        client = get_motor_client() 
+    except RuntimeError as e:
+        logger.error(f"MongoDB client not initialized for purchase_subscription: {e}", exc_info=False)
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Database not ready.")
 
-    client = motor_client
     async with await client.start_session() as session:
         try:
             async with session.start_transaction():
@@ -1285,7 +1023,7 @@ async def admin_login(request_data: LoginUserRequest, request: Request):
 @app.post('/api/admin/refresh-token')
 async def admin_refresh_token(request_data: RefreshTokenRequest, request: Request):
     try:
-        payload = jwt.decode(request_data.refreshToken, REFRESH_KEY, algorithms=[JWT_ALGORITHM])
+        payload = jwt.decode(request_data.refreshToken, REFRESH_SECRET_KEY, algorithms=[JWT_ALGORITHM])
 
         user_id: str = payload.get("userId")
         role: str = payload.get("role")
@@ -1452,11 +1190,13 @@ async def admin_change_user(
     request: Request,
     admin_user: User = Depends(get_admin_user)
 ):
-    if motor_client is None:
-        logger.error("MongoDB client not initialized")
-        raise HTTPException(status_code=500, detail="Database not available")
+    try:
+        # ИСПРАВЛЕНИЕ: Получаем клиент через функцию get_motor_client()
+        client = get_motor_client()
+    except RuntimeError as e:
+        logger.error(f"Юзер не авторизован: {e}", exc_info=False)
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Database not available")
 
-    client = motor_client
     async with await client.start_session() as session:
         async with session.start_transaction():
             try:
@@ -1591,11 +1331,13 @@ async def admin_change_plan(
     request: Request,
     admin_user: User = Depends(get_admin_user)
 ):
-    if motor_client is None:
-        logger.error("MongoDB client not initialized")
-        raise HTTPException(status_code=500, detail="Database not available")
+    try:
+        # ИСПРАВЛЕНИЕ: Получаем клиент через функцию get_motor_client()
+        client = get_motor_client()
+    except RuntimeError as e:
+        logger.error(f"MongoDB client not initialized for admin_change_plan: {e}", exc_info=False)
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Database not available")
 
-    client = motor_client
     async with await client.start_session() as session:
         async with session.start_transaction():
             try:
@@ -1695,9 +1437,12 @@ async def admin_create_plan(
     request: Request,
     admin_user: User = Depends(get_admin_user)
 ):
-    if motor_client is None:
-        logger.error("MongoDB client not initialized")
-        raise HTTPException(status_code=500, detail="Database not available")
+    try:
+        # ИСПРАВЛЕНИЕ: Получаем клиент через функцию get_motor_client()
+        client = get_motor_client()
+    except RuntimeError as e:
+        logger.error(f"MongoDB client not initialized for admin_create_plan: {e}", exc_info=False)
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Database not available")
 
     try:
         if not request_data.name:
@@ -1759,11 +1504,13 @@ async def admin_delete_plan(
     request: Request,
     admin_user: User = Depends(get_admin_user)
 ):
-    if motor_client is None:
-        logger.error("MongoDB client not initialized")
-        raise HTTPException(status_code=500, detail="Database not available")
+    try:
+        # ИСПРАВЛЕНИЕ: Получаем клиент через функцию get_motor_client()
+        client = get_motor_client()
+    except RuntimeError as e:
+        logger.error(f"MongoDB client not initialized for admin_delete_plan: {e}", exc_info=False)
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Database not available")
 
-    client = motor_client
     async with await client.start_session() as session:
         async with session.start_transaction():
             try:
@@ -1817,7 +1564,17 @@ async def admin_delete_plan(
 @app.on_event("startup")
 async def startup_event():
     """Runs before the application starts."""
-    await init_db()
+    logger.info("Starting up application...")
+    
+    try:
+        await init_db() # Только вызов функции инициализации базы данных
+        logger.info("Database initialized successfully.")
+        await init_scheduler() # <--- НЕ ЗАБУДЬТЕ ВЕРНУТЬ ЭТОТ ВЫЗОВ!
+        logger.info("Scheduler initialized successfully.")
+    except Exception as e:
+        logger.critical(f"Failed to initialize application: {e}", exc_info=True)
+        # В случае критической ошибки на старте, FastAPI сам не запустит сервер.
+        raise # Перевыбрасываем исключение, чтобы оно было видно
 
 
 @app.get("/")

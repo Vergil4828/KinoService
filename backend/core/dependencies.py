@@ -19,7 +19,7 @@ from backend.core.config import (
 
 # Импортируем необходимые модели
 from backend.models.user import User
-from backend.models.admin_action import AdminAction
+from backend.models.admin import AdminAction
 
 # Функция для генерации токенов
 def generate_tokens(user: User) -> Dict[str, str]:

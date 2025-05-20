@@ -8,11 +8,10 @@ from typing import List, Type, Optional
 from backend.core.config import MONGO_URI, MONGO_DB_NAME, logger
 
 # Импортируем все ваши Beanie Document модели
-from backend.models.user import User
+from backend.models.user import User, UserStats
 from backend.models.subscription import SubscriptionPlan, SubscriptionHistory
 from backend.models.transaction import Transaction
-from backend.models.admin_action import AdminAction
-from backend.models.user_stats import UserStats
+from backend.models.admin import AdminAction
 
 # Глобальная переменная для клиента Motor
 motor_client: Optional[AsyncIOMotorClient] = None
@@ -61,3 +60,12 @@ async def init_db():
         logger.error(f"Критическая ошибка подключения к базе данных или инициализации Beanie: {e}", exc_info=True)
         # В случае критической ошибки подключения, приложение не должно запускаться
         raise # Перевыбрасываем исключение, чтобы FastAPI его поймал и остановил стартап
+
+def get_motor_client() -> AsyncIOMotorClient:
+    """Возвращает инициализированный MotorClient."""
+    if motor_client is None:
+        # Это исключение должно быть поймано и обработано на уровне вызова,
+        # например, в функциях, которые работают с БД.
+        logger.error("Motor client не инициализирован. Вызовите init_db сначала.")
+        raise RuntimeError("Motor client not initialized.")
+    return motor_client
