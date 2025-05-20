@@ -1,3 +1,4 @@
+from __future__ import annotations
 import os
 import logging
 from dotenv import load_dotenv
@@ -32,19 +33,22 @@ import aiofiles.os
 import re
 import math 
 
-
 from models import (
     User,
     SubscriptionPlan,
     SubscriptionHistory,
     UserStats,
     Transaction,
-    AdminAction,
+    AdminAction
+)
+from models.embedded import (
     RefreshTokenEmbedded,
     CurrentSubscriptionEmbedded,
     SubscriptionHistoryEmbedded,
     WalletEmbedded,
-    NotificationsEmbedded,
+    NotificationsEmbedded
+)
+from schemas import (
     SubscriptionPlanResponse,
     SubscriptionHistoryResponse,
     TransactionResponse,
@@ -61,6 +65,7 @@ from models import (
     AdminChangePlanRequest,
     AdminChangeUserRequest
 )
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -125,6 +130,7 @@ UserResponseBase.model_rebuild()
 motor_client: Optional[AsyncIOMotorClient] = None
 
 async def init_db():
+    logger.info("--- TEST LOG: init_db начала выполнение ---")
     logger.info("Попытка подключения к MongoDB...")
     try:
         script_dir = Path(__file__).parent

@@ -179,7 +179,12 @@ export default {
       if (!file) return;
 
       if (file.size > 2 * 1024 * 1024) {
-        this.passwordError = 'Файл слишком большой (максимум 2МВ)'
+        this.$notify({
+            title: "Файл слишком большой",
+            text: `2 МБ - максимальный размер файла`,
+            type: "warning",
+            duration: 10000
+          });
         return
       }
 

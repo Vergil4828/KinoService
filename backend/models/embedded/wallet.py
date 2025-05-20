@@ -1,19 +1,10 @@
+from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Optional, List
 from pydantic import Field, BaseModel, ConfigDict
 from beanie import PydanticObjectId
 
-from typing import TYPE_CHECKING, ForwardRef
-if TYPE_CHECKING:
-    from .transaction import TransactionResponse
-
-class DepositWalletRequest(BaseModel):
-    amount: float = Field(gt=0)
-    paymentMethod: str = 'manual'
-
-class WithdrawWalletRequest(BaseModel):
-    amount: float = Field(gt=0)
-    description: Optional[str] = ''
+from schemas.transaction import TransactionResponse
 
 
 class WalletEmbedded(BaseModel):
