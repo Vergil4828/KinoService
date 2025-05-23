@@ -1,14 +1,15 @@
 import axios from 'axios';
 import router from './router.js';
 import store from './store'; // Путь к схрону
+axios.defaults.validateStatus = function (status) {
+  return status >= 200 && status < 300; // Только 2xx статусы считаются успешными
+};
 const setupInterceptors = (router) => {
   // Request interceptor
   axios.interceptors.request.use(config => {
-    const token = localStorage.getItem('accessToken');
-    console.log('Токен из localStorage:', token);  // Логируем
+    const token = localStorage.getItem('accessToken');  // Логируем
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-      console.log('Добавляем токен в заголовок:', config.headers.Authorization);  // Логируем
+      config.headers.Authorization = `Bearer ${token}`;  // Логируем
     }
     return config;
   });
@@ -56,7 +57,7 @@ const setupInterceptors = (router) => {
             localStorage.setItem(newRefreshTokenKey, data.refreshToken);
           }
 
-          originalRequest.headers.Authorization = `Bearer ${data.token}`;
+          originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
           return axios(originalRequest);
         } catch (err) {
           await store.dispatch('logout');

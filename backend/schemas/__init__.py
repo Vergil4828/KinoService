@@ -1,4 +1,3 @@
-# Основные схемы
 from __future__ import annotations
 from .admin import AdminActionResponse, AdminChangePlanRequest, AdminChangeUserRequest
 from .subscription import (

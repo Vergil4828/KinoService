@@ -4,7 +4,6 @@ export default {
     mounted() {
         this.initSmoothScroll();
         this.loadSubscriptions();
-        console.log('activePlanId', this.activePlanId);
     },
     computed: {
 
@@ -249,7 +248,8 @@ export default {
                             'bg-gradient-to-r from-teal-500 to-blue-500 hover:from-teal-600 hover:to-blue-600': plan._id === '67f437687b06d9a11720a6d1',
                             'bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600': plan._id === '67f437687b06d9a11720a6d4',
                             'bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600': !['67f437687b06d9a11720a6ce', '67f437687b06d9a11720a6d1', '67f437687b06d9a11720a6d4'].includes(plan._id)
-                        }" class="w-full py-3 rounded-lg transition-all duration-300 shadow-md hover:shadow-teal-500/30 mt-auto">
+                        }"
+                            class="w-full py-3 rounded-lg transition-all duration-300 shadow-md hover:shadow-teal-500/30 mt-auto">
                             {{ isAuthenticated ? 'Выбрать' : 'Войдите для выбора' }}
                         </button>
                     </div>
@@ -261,96 +261,93 @@ export default {
             <div class="max-w-6xl mx-auto">
                 <div class="flex justify-center">
                     <h2 class="text-4xl font-bold mb-16 relative inline-block">
-                        <span class="relative z-10">Популярные фильмы
-
-
-                        </span>
+                        <span class="relative z-10">Популярные фильмы</span>
                         <span
                             class="absolute -bottom-2 left-0 w-full h-1 bg-gradient-to-r from-teal-400 to-blue-500 rounded-full"></span>
                     </h2>
                 </div>
 
                 <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                    <!-- Фильм 1 -->
                     <div
-                        class="group relative overflow-hidden rounded-xl shadow-lg transition-all duration-500 transform hover:-translate-y-2 hover:shadow-xl hover:shadow-teal-500/20">
+                        class="group relative overflow-hidden rounded-xl shadow-lg transition-all duration-500 transform hover:-translate-y-2 hover:hover:shadow-teal-500/20">
                         <div class="aspect-w-2 aspect-h-3 bg-gray-800 rounded-xl overflow-hidden">
-                            <img src="https://via.placeholder.com/300x450" alt="Фильм 1"
+                            <img src="https://m.media-amazon.com/images/M/MV5BZjdkOTU3MDktN2IxOS00OGEyLWFmMjktY2FiMmZkNWIyODZiXkEyXkFqcGdeQXVyMTMxODk2OTU@._V1_FMjpg_UX1000_.jpg"
+                                alt="Интерстеллар"
                                 class="object-cover w-full h-full group-hover:opacity-75 transition-opacity duration-300">
                         </div>
-                        <div
-                            class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
-                            <h3 class="text-xl font-bold text-white">Интерстеллар</h3>
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4"
+                            style="z-index: 10; color: white;">
+                            <h3 class="text-xl font-bold">Интерстеллар</h3>
                             <p class="text-teal-400">Фантастика, 2014</p>
                             <div class="flex items-center mt-2">
                                 <svg class="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
                                     <path
                                         d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                                 </svg>
-                                <span class="ml-1 text-white">8.6</span>
+                                <span class="ml-1">8.6</span>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Фильм 2 -->
                     <div
                         class="group relative overflow-hidden rounded-xl shadow-lg transition-all duration-500 transform hover:-translate-y-2 hover:shadow-xl hover:shadow-teal-500/20">
                         <div class="aspect-w-2 aspect-h-3 bg-gray-800 rounded-xl overflow-hidden">
-                            <img src="https://via.placeholder.com/300x450" alt="Фильм 2"
+                            <img src="https://m.media-amazon.com/images/M/MV5BMjAxMzY3NjcxNF5BMl5BanBnXkFtZTcwNTI5OTM0Mw@@._V1_.jpg"
+                                alt="Начало"
                                 class="object-cover w-full h-full group-hover:opacity-75 transition-opacity duration-300">
                         </div>
-                        <div
-                            class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
-                            <h3 class="text-xl font-bold text-white">Начало</h3>
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4"
+                            style="z-index: 10; color: white;">
+                            <h3 class="text-xl font-bold">Начало</h3>
                             <p class="text-teal-400">Фантастика, 2010</p>
                             <div class="flex items-center mt-2">
                                 <svg class="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
                                     <path
                                         d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                                 </svg>
-                                <span class="ml-1 text-white">8.8</span>
+                                <span class="ml-1">8.8</span>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Фильм 3 -->
                     <div
                         class="group relative overflow-hidden rounded-xl shadow-lg transition-all duration-500 transform hover:-translate-y-2 hover:shadow-xl hover:shadow-teal-500/20">
                         <div class="aspect-w-2 aspect-h-3 bg-gray-800 rounded-xl overflow-hidden">
-                            <img src="https://via.placeholder.com/300x450" alt="Фильм 3"
+                            <img src="https://cdn.ananasposter.ru/image/cache/catalog/poster/film/87/6240-1000x830.jpg"
+                                alt="Бойцовский клуб"
                                 class="object-cover w-full h-full group-hover:opacity-75 transition-opacity duration-300">
                         </div>
-                        <div
-                            class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
-                            <h3 class="text-xl font-bold text-white">Довод</h3>
-                            <p class="text-teal-400">Боевик, 2020</p>
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4"
+                            style="z-index: 10; color: white;">
+                            <h3 class="text-xl font-bold">Бойцовский клуб</h3>
+                            <p class="text-teal-400">Драма, 1999</p>
                             <div class="flex items-center mt-2">
                                 <svg class="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
                                     <path
                                         d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                                 </svg>
-                                <span class="ml-1 text-white">7.5</span>
+                                <span class="ml-1">8.8</span>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Фильм 4 -->
                     <div
                         class="group relative overflow-hidden rounded-xl shadow-lg transition-all duration-500 transform hover:-translate-y-2 hover:shadow-xl hover:shadow-teal-500/20">
                         <div class="aspect-w-2 aspect-h-3 bg-gray-800 rounded-xl overflow-hidden">
-                            <img src="https://via.placeholder.com/300x450" alt="Фильм 4"
+                            <img src="https://m.media-amazon.com/images/M/MV5BMTMxNTMwODM0NF5BMl5BanBnXkFtZTcwODAyMTk2Mw@@._V1_.jpg"
+                                alt="Темный рыцарь"
                                 class="object-cover w-full h-full group-hover:opacity-75 transition-opacity duration-300">
                         </div>
-                        <div
-                            class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
-                            <h3 class="text-xl font-bold text-white">Темный рыцарь</h3>
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4"
+                            style="z-index: 10; color: white;">
+                            <h3 class="text-xl font-bold">Темный рыцарь</h3>
                             <p class="text-teal-400">Боевик, 2008</p>
                             <div class="flex items-center mt-2">
                                 <svg class="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
                                     <path
                                         d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                                 </svg>
-                                <span class="ml-1 text-white">9.0</span>
+                                <span class="ml-1">9.0</span>
                             </div>
                         </div>
                     </div>

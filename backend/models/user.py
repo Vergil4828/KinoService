@@ -24,6 +24,11 @@ class User(Document):
     refreshTokens: List[RefreshTokenEmbedded] = Field(default_factory=list) 
     createdAt: Optional[datetime] = None
     updatedAt: Optional[datetime] = None
+    
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+        json_encoders={PydanticObjectId: str}
+    )
 
     class Settings:
         name = "users"
@@ -39,37 +44,5 @@ class User(Document):
              if self.createdAt is None:
                   self.createdAt = datetime.now(timezone.utc)
         self.updatedAt = datetime.now(timezone.utc)
-
-
-class UserStats(Document):
-    userId: PydanticObjectId
-    views: int = Field(default=0, ge=0)
-    ratings: int = Field(default=0, ge=0)
-    favorites: List[PydanticObjectId] = []
-    watchlist: List[PydanticObjectId] = []
-    createdAt: Optional[datetime] = None
-    updatedAt: Optional[datetime] = None
-
-
-    class Settings:
-        name = "userstats"
-        indexes = [
-            IndexModel([("userId", 1)], name="userId_1", unique=True, background=True),
-        ]
-        use_state_management = True
-
-    async def before_save(self):
-        if self.id is None or (self.id is not None and self.get_original_state() is None):
-             if self.createdAt is None:
-                  self.createdAt = datetime.now(timezone.utc)
-        self.updatedAt = datetime.now(timezone.utc)
-
-
- 
-
-
-
-
-
 
 

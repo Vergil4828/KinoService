@@ -269,6 +269,35 @@ export default {
         });
       }
     },
+    async deleteUser(userId) {
+
+      try {
+        const response = await axios.delete(
+          `/api/admin/user/delete/${userId}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('adminAccessToken')}`
+            }
+          }
+        );
+
+        if (response.data.success) {
+          this.$notify({
+            type: 'success',
+            text: 'Пользователь успешно удален'
+          });
+          await this.loadUsers();
+        }
+      } catch (error) {
+        console.error('Delete user error:', error);
+        this.$notify({
+          type: 'error',
+          text: error.response?.data?.detail ||
+            error.response?.data?.message ||
+            'Не удалось удалить пользователя'
+        });
+      }
+    },
 
     async updateSubscription() {
       try {
@@ -832,6 +861,9 @@ export default {
                     <button @click="editUser(user)" class="btn btn-sm btn-edit">
                       Редактировать
                     </button>
+                    <button @click="deleteUser(user._id)" class="btn btn-sm btn-danger">
+                      Удалить
+                    </button>
                   </td>
                 </tr>
               </tbody>
@@ -1114,5 +1146,15 @@ textarea.form-control {
   .btn {
     width: 100%;
   }
+  
+}
+.btn-danger {
+  background-color: #dc3545;
+  color: white;
+  margin-left: 5px;
+}
+
+.btn-danger:hover {
+  background-color: #c82333;
 }
 </style>

@@ -44,7 +44,7 @@ export default {
     userSubscription: {
       deep: true,
       handler(newVal) {
-        
+
         if (newVal.daysLeft <= 3 && newVal.daysLeft > 0) {
           this.$notify({
             title: "Подписка истекает",
@@ -180,11 +180,11 @@ export default {
 
       if (file.size > 2 * 1024 * 1024) {
         this.$notify({
-            title: "Файл слишком большой",
-            text: `2 МБ - максимальный размер файла`,
-            type: "warning",
-            duration: 10000
-          });
+          title: "Файл слишком большой",
+          text: `2 МБ - максимальный размер файла`,
+          type: "warning",
+          duration: 10000
+        });
         return
       }
 
@@ -238,7 +238,7 @@ export default {
 
         const response = await this.$store.dispatch('updateProfile', profileData);
 
-        if (response.success) { 
+        if (response.success) {
           this.isEditing = false;
           this.passwordError = '';
           this.initializeProfile();
@@ -549,7 +549,7 @@ export default {
         </div>
       </div>
 
-      
+
 
       <!-- Избранное и платежи -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
@@ -580,12 +580,9 @@ export default {
             Способы оплаты
           </h3>
           <div class="flex justify-around mt-4">
-            <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/visa/visa-original.svg"
-              class="h-8 opacity-80 hover:opacity-100 transition" alt="Visa" />
-            <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/mastercard/mastercard-original.svg"
-              class="h-8 opacity-80 hover:opacity-100 transition" alt="MasterCard" />
-            <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/paypal/paypal-original.svg"
-              class="h-8 opacity-80 hover:opacity-100 transition" alt="PayPal" />
+            <i class="fab fa-cc-visa fa-2x opacity-80 hover:opacity-100 transition text-white"></i>
+            <i class="fab fa-cc-mastercard fa-2x opacity-80 hover:opacity-100 transition text-white"></i>
+            <i class="fab fa-paypal fa-2x opacity-80 hover:opacity-100 transition text-white"></i>
           </div>
         </div>
       </div>

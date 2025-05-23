@@ -5,10 +5,6 @@ from pydantic import Field, BaseModel, ConfigDict, field_validator
 from beanie import Document, PydanticObjectId
 from pymongo import IndexModel
 
-from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from backend.schemas.transaction import TransactionResponse  
-
 
 class SubscriptionPlan(Document):
     name: str = Field(..., unique=True)

@@ -444,20 +444,22 @@ export default createStore({
       commit('SET_SUBSCRIPTION_ERROR', null);
 
       try {
-        const response = await axios.post('/api/subscriptions/purchase', { planId }, {
-          validateStatus: function (status) {
-            return status >= 200 && status < 500;
-          }
-        });
+        // --- УДАЛЕНО: validateStatus: function (status) { return status >= 200 && status < 500; } ---
+        // Теперь интерцептор будет обрабатывать 401 как ошибку
+        const response = await axios.post('/api/subscriptions/purchase', { planId }); // Используем `api`
 
         if (!response.data) {
           throw new Error('Сервер не вернул данные');
         }
 
-        // Обработка HTTP ошибок
-        if (response.status >= 400) {
-          const errorMsg = response.data?.error || `Ошибка ${response.status}`;
-          throw new Error(errorMsg);
+        // Этот блок теперь будет срабатывать только для статусов, которые интерцептор
+        // не посчитал ошибкой и вернул как успешный ответ, но при этом они указывают на "логическую" ошибку.
+        // В идеале, после настройки интерцептора, сюда будут попадать только 2xx статусы.
+        // Если сюда попал 401, это значит, что что-то не так с настройкой интерцептора
+        // или с тем, как axios обрабатывает validateStatus.
+        if (response.status >= 400) { 
+           const errorMsg = response.data?.error || `Ошибка ${response.status}`;
+           throw new Error(errorMsg);
         }
 
         // Обработка успешного ответа
@@ -478,17 +480,21 @@ export default createStore({
           }
           if (response.data.subscription) {
             commit('SET_CURRENT_SUBSCRIPTION', response.data.subscription);
-            commit('ADD_SUBSCRIPTION_HISTORY', response.data.subscription);
+            commit('ADD_SUBSCRIPTION_HISTORY', response.data.subscription); // Если у вас есть такая мутация
           }
           return { success: true };
         }
 
+        // Если success=false, но нет paymentRequired, выбрасываем ошибку
         throw new Error(response.data.error || 'Неизвестная ошибка');
 
       } catch (error) {
+        // Здесь мы ловим ошибки, которые выбросил интерцептор (например, 401 после неудачной попытки refresh)
+        // или другие ошибки, которые не были обработаны интерцептором (например, 500)
+        console.error("Ошибка в purchasePlan (после интерцептора):", error.response?.data || error.message);
         const errorMessage = error.response?.data?.error || error.message || 'Ошибка при покупке подписки';
         commit('SET_SUBSCRIPTION_ERROR', errorMessage);
-        throw error;
+        throw error; // Очень важно перебросить ошибку дальше, чтобы компонент мог ее поймать
       } finally {
         commit('SET_SUBSCRIPTION_LOADING', false);
       }
@@ -537,7 +543,6 @@ export default createStore({
       }
     },
     activeSubscriptionPlanId: (state) => {
-      console.log('Current subscription data:', state.user.subscription?.currentPlan);
       if (!state.auth.isAuthenticated) return null;
 
       // Получаем текущий план из разных возможных мест в структуре

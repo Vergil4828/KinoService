@@ -23,6 +23,11 @@ class Transaction(Document):
     createdAt: Optional[datetime] = None
     updatedAt: Optional[datetime] = None
 
+
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+        json_encoders={PydanticObjectId: str}
+    )
     @field_validator('amount')
     @classmethod
     def amount_cannot_be_zero(cls, v):

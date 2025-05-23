@@ -130,7 +130,12 @@ export default {
                 console.log(formData)
                 await this.register(formData)
             } catch (err) {
-                alert(err.message || "Registration failed")
+                    this.$notify({
+                        title: 'Ошибка',
+                        message: err.message || 'Произошла ошибка при регистрации',
+                        type: 'error',
+                        duration: 5000
+                    });
             }
         },
         validateEmail(email) {

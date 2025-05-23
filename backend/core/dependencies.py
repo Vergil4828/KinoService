@@ -1,27 +1,26 @@
-# backend/core/dependencies.py
 import logging
 from datetime import datetime, timedelta, timezone
 from typing import Dict, Any, Optional
-from jose import JWTError, jwt
-import bcrypt # Для хеширования паролей, если он тут используется
+from jose import JWTError, jwt, ExpiredSignatureError
+import bcrypt
 from fastapi import HTTPException, Depends, status, Request
 from beanie.odm.fields import PydanticObjectId
 
-# Импортируем logger и секретные ключи из config.py
+
 from backend.core.config import (
     logger,
     JWT_SECRET_KEY,
     REFRESH_SECRET_KEY,
     JWT_ALGORITHM,
-    ACCESS_TOKEN_EXPIRE_MINUTES, # Может понадобиться, если generate_tokens здесь
-    REFRESH_TOKEN_EXPIRE_DAYS # Может понадобиться
+    ACCESS_TOKEN_EXPIRE_MINUTES, 
+    REFRESH_TOKEN_EXPIRE_DAYS 
 )
 
-# Импортируем необходимые модели
+
 from backend.models.user import User
 from backend.models.admin import AdminAction
 
-# Функция для генерации токенов
+
 def generate_tokens(user: User) -> Dict[str, str]:
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     refresh_token_expires = timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
@@ -46,61 +45,76 @@ def generate_tokens(user: User) -> Dict[str, str]:
         "refreshToken": refresh_token
     }
 
-# Dependency для получения текущего пользователя
 async def get_current_user(request: Request) -> User:
-    """FastAPI Dependency to get the current authenticated user."""
-    auth_header = request.headers.get('Authorization')
-    x_access_token = request.headers.get('x-access-token')
-    token = None
-    if auth_header:
-        try:
-            scheme, param = auth_header.split()
-            if scheme.lower() == 'bearer':
-                token = param
-        except ValueError: pass
-    elif x_access_token:
-        token = x_access_token
-
-    if not token:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Нет токена",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
     try:
-        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
-        user_id: str = payload.get("userId")
-        if user_id is None:
+        
+        auth_header = request.headers.get('Authorization')
+        x_access_token = request.headers.get('x-access-token')
+        token = None
+
+        if auth_header:
+            try:
+                scheme, token = auth_header.split()
+                if scheme.lower() != 'bearer':
+                    raise ValueError("Invalid scheme")
+            except ValueError:
+                token = None
+        
+        if not token and x_access_token:
+            token = x_access_token
+
+        if not token:
+            logger.warning("Недостаточно прав доступа")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Неверный токен (нет userId)",
+                detail="Authentication required",
                 headers={"WWW-Authenticate": "Bearer"},
             )
-        user = await User.get(PydanticObjectId(user_id))
-        if user is None:
+
+        try:
+            payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+            user_id = payload.get("userId")
+            
+            if not user_id:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid token format",
+                )
+
+            user = await User.get(PydanticObjectId(user_id))
+            if not user:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="User not found",
+                )
+
+            return user
+
+        except ExpiredSignatureError:
+            logger.warning("Access token expired")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Пользователь не найден",
+                detail="Token expired",
                 headers={"WWW-Authenticate": "Bearer"},
             )
-        return user
-    except JWTError:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Неверный или просроченный токен доступа",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        except JWTError as e:
+            logger.warning(f"JWT validation failed: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token",
+            )
+
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Ошибка в get_current_user: {e}", exc_info=True)
+        logger.error(f"Unexpected auth error: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Внутренняя ошибка сервера при аутентификации",
+            detail="Authentication error",
         )
 
-# Dependency для проверки админ-прав
+
 async def get_admin_user(current_user: User = Depends(get_current_user)):
-    """FastAPI Dependency to check if the authenticated user is an admin."""
     if current_user.role != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -108,7 +122,7 @@ async def get_admin_user(current_user: User = Depends(get_current_user)):
         )
     return current_user
 
-# Функция для логирования действий администратора
+
 async def log_admin_action(
     admin_user: User,
     request: Request,
@@ -119,7 +133,6 @@ async def log_admin_action(
     additional_info: Optional[str] = None
 ):
     now_utc = datetime.now(timezone.utc)
-    """Logs an administrative action."""
     try:
         admin_action = AdminAction(
             adminId=admin_user.id,
@@ -136,3 +149,5 @@ async def log_admin_action(
         await admin_action.insert()
     except Exception as err:
         logger.error(f'Ошибка при записи действия администратора: {err}', exc_info=True)
+        
+    

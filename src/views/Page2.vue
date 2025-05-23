@@ -46,9 +46,9 @@ export default {
       <div class="mb-8 flex justify-center gap-3">
         <button 
           v-for="tab in [
-            { id: 'free', name: 'Бесплатно', color: 'indigo' },
-            { id: 'basic', name: 'Базовый', color: 'purple' },
-            { id: 'premium', name: 'Премиум', color: 'pink' }
+            { id: 'free', name: 'Базовый', color: 'indigo' },
+            { id: 'basic', name: 'Популярный', color: 'purple' },
+            { id: 'premium', name: 'Премиум+', color: 'pink' }
           ]"
           :key="tab.id"
           @click="activeTab = tab.id"
