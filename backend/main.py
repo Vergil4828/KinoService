@@ -5,48 +5,21 @@ from backend.core.config import (
     ALLOWED_ORIGINS,
     PUBLIC_DIR,
     AVATAR_UPLOAD_DIR,
-    JWT_SECRET_KEY, # <-- Добавьте это
-    REFRESH_SECRET_KEY, # <-- Добавьте это (если используется для токенов обновления)
-    JWT_ALGORITHM # <-- Добавьте это
+    JWT_SECRET_KEY, 
+    REFRESH_SECRET_KEY,
+    JWT_ALGORITHM 
 )
 from backend.core.database import init_db
 from backend.core.tasks import init_scheduler
-from backend.core.dependencies import get_current_user, get_admin_user, log_admin_action, generate_tokens
-from backend.core.database import get_motor_client
-
-import os
-import logging
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Depends, status, Request, UploadFile, File, Form, Query
+from fastapi import FastAPI
 from fastapi.middleware import Middleware
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 import json
-from motor.motor_asyncio import AsyncIOMotorClient
-from beanie.odm.fields import PydanticObjectId
-
-from motor.core import AgnosticClientSession as AsyncIOMotorSession
-from beanie import init_beanie, Document, Indexed, PydanticObjectId, Link
-from datetime import datetime, timedelta, timezone
-from typing import List, Optional, Dict, Any, Union
+from beanie import PydanticObjectId
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-
-from pydantic import Field, BaseModel, ConfigDict, field_validator, EmailStr, validator
-from pydantic_core.core_schema import ValidationInfo
-from pathlib import Path
-from jose import JWTError, jwt
-import bcrypt 
-import pytz 
-
-from pymongo import IndexModel, MongoClient
-from pymongo.errors import DuplicateKeyError, ConfigurationError, OperationFailure, InvalidOperation, ServerSelectionTimeoutError 
-import shutil 
-import uuid 
-import aiofiles 
-import aiofiles.os 
-import re
-import math 
 
 from backend.models import (
     User,
@@ -137,14 +110,14 @@ async def startup_event():
     logger.info("Starting up application...")
     
     try:
-        await init_db() # Только вызов функции инициализации базы данных
+        await init_db()
         logger.info("Database initialized successfully.")
-        await init_scheduler() # <--- НЕ ЗАБУДЬТЕ ВЕРНУТЬ ЭТОТ ВЫЗОВ!
+        await init_scheduler() 
         logger.info("Scheduler initialized successfully.")
     except Exception as e:
         logger.critical(f"Failed to initialize application: {e}", exc_info=True)
-        # В случае критической ошибки на старте, FastAPI сам не запустит сервер.
-        raise # Перевыбрасываем исключение, чтобы оно было видно
+        
+        raise 
 
 
 @app.get("/")
