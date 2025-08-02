@@ -1,0 +1,2236 @@
+openapi: 3.0.4
+info:
+  title: Киносервис API
+  description: API для управления пользователями, подписками и контентом киносервиса.
+  version: 1.0.0
+servers:
+  - url: http://localhost:3005/api
+tags:
+  - name: user
+    description: Операции с пользователями
+  - name: wallet
+    description: Операции с кошельком пользователя
+  - name: subscription
+    description: Операции с подписками
+  - name: admin
+    description: Операции администрирования
+paths:
+  /create/user:
+    post:
+      summary: Создать нового пользователя
+      description: Создает нового пользователя с уникальным email и привязывает его к базовому тарифному плану.
+      operationId: registerUser
+      tags:
+        - user
+      requestBody:
+        description: Данные для регистрации нового пользователя
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserRequest"
+      responses:
+        "201":
+          description: Пользователь успешно создан и авторизован
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateUserResponse"
+        "400":
+          description: Неверные данные или email уже используется
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                code: "bad_request"
+                message: "Email уже занят"
+        "500":
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                code: "internal_server_error"
+                message: "Ошибка сервера при создании пользователя"
+  /login/user:
+    post:
+      summary: Вход пользователя в систему
+      description: Аутентифицирует пользователя по email и паролю, возвращает токены доступа и обновления.
+      operationId: loginUser
+      tags:
+        - user
+      requestBody:
+        description: Данные для входа в систему
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginUserRequest"
+      responses:
+        "200":
+          description: Успешный вход в систему
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginUserResponse"
+        "400":
+          description: Неверный email или пароль
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                code: "bad_request"
+                message: "Invalid email or password"
+        "500":
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                code: "internal_server_error"
+                message: "Internal server error during login"
+  /user/data:
+    get:
+      summary: Получить данные текущего пользователя
+      description: Возвращает полную информацию о текущем авторизованном пользователе, включая подписку, историю подписок и историю транзакций.
+      operationId: getUserData
+      tags:
+        - user
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Успешно получены данные пользователя
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetUserResponse"
+        "401":
+          description: Неавторизованный доступ
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                code: "unauthorized"
+                message: "Not authenticated"
+        "404":
+          description: Пользователь не найден
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                code: "not_found"
+                message: "User not found"
+        "500":
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                code: "internal_server_error"
+                message: "Internal server error"
+  /update/user:
+    put:
+      summary: Обновить данные пользователя
+      description: Обновляет данные текущего авторизованного пользователя. Требует текущий пароль для подтверждения.
+      operationId: updateUser
+      tags:
+        - user
+      security:
+        - bearerAuth: []
+      requestBody:
+        description: Данные для обновления пользователя
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserRequest"
+      responses:
+        "200":
+          description: Данные пользователя успешно обновлены
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UpdateUserResponse"
+        "400":
+          description: Неверный пароль или email уже используется
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                code: "bad_request"
+                message: "Неверный текущий пароль"
+        "401":
+          description: Неавторизованный доступ
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                code: "unauthorized"
+                message: "Not authenticated"
+        "500":
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                code: "internal_server_error"
+                message: "Ошибка сервера при обновлении профиля"
+  /logout:
+    post:
+      summary: Выход пользователя из системы
+      description: Подтверждает выход пользователя из системы (предполагается удаление токена на стороне клиента).
+      operationId: logoutUser
+      tags:
+        - user
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Успешный выход из системы
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LogoutUserResponse"
+        "401":
+          description: Неавторизованный доступ
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                code: "unauthorized"
+                message: "Not authenticated"
+        "500":
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                code: "internal_server_error"
+                message: "Internal server error during logout confirmation"
+  /refresh-token:
+    post:
+      summary: Обновить access-токен
+      description: Обновляет access-токен, используя refresh-токен.
+      operationId: refreshAccessToken
+      tags:
+        - user
+      requestBody:
+        description: Данные с refresh-токеном
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshTokenRequest"
+      responses:
+        "200":
+          description: Токены успешно обновлены
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RefreshTokenResponse"
+        "401":
+          description: Неверный или истекший refresh-токен
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                code: "unauthorized"
+                message: "Invalid refresh token"
+        "500":
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                code: "internal_server_error"
+                message: "Internal server error"
+  /user/avatar:
+    post:
+      summary: Загрузить аватар пользователя
+      description: Загружает новый аватар для текущего авторизованного пользователя. Старый аватар будет удален.
+      operationId: uploadAvatar
+      tags:
+        - user
+      security:
+        - bearerAuth: []
+      requestBody:
+        description: Файл аватара
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                avatar:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Аватар успешно загружен и обновлен
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadAvatarResponse"
+        "400":
+          description: Неверный запрос (неверный тип файла или размер)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                code: "bad_request"
+                message: "Разрешены только файлы изображений (JPEG, PNG, GIF)."
+        "401":
+          description: Неавторизованный доступ
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                code: "unauthorized"
+                message: "Not authenticated"
+        "500":
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                code: "internal_server_error"
+                message: "Ошибка сервера при загрузке аватара"
+  /wallet:
+    get:
+      summary: Получить данные о кошельке
+      description: Возвращает баланс и историю транзакций текущего авторизованного пользователя.
+      operationId: getWalletData
+      tags:
+        - wallet
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Успешно получены данные кошелька
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WalletResponse"
+        "401":
+          description: Неавторизованный доступ
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                code: "unauthorized"
+                message: "Not authenticated"
+        "500":
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                code: "internal_server_error"
+                message: "Internal server error"
+  /wallet/deposit:
+    post:
+      summary: Пополнить баланс кошелька
+      description: Пополняет баланс текущего пользователя и записывает новую транзакцию.
+      operationId: depositWallet
+      tags:
+        - wallet
+      security:
+        - bearerAuth: []
+      requestBody:
+        description: Данные о пополнении
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DepositWalletRequest"
+      responses:
+        "200":
+          description: Кошелек успешно пополнен
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DepositWalletResponse"
+        "400":
+          description: Неверные данные запроса
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                code: "bad_request"
+                message: "Сумма пополнения должна быть положительной"
+        "401":
+          description: Неавторизованный доступ
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                code: "unauthorized"
+                message: "Not authenticated"
+        "500":
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                code: "internal_server_error"
+                message: "Internal server error"
+  /plans:
+    get:
+      summary: Получить список доступных подписок
+      description: Возвращает список всех доступных тарифных планов.
+      operationId: getSubscriptionPlans
+      tags:
+        - subscription
+      responses:
+        "200":
+          description: Успешно получены доступные тарифные планы
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SubscriptionPlanResponse"
+        "500":
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                code: "internal_server_error"
+                message: "Ошибка сервера при получении списка планов"
+  /plans/{planId}:
+    get:
+      summary: Получить тарифный план по ID
+      description: Возвращает данные одного тарифного плана по его ID.
+      operationId: getPlanById
+      tags:
+        - subscription
+      parameters:
+        - name: planId
+          in: path
+          required: true
+          description: ID тарифного плана
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Успешно получены данные тарифного плана
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubscriptionPlanResponse"
+        "404":
+          description: План не найден
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                code: "not_found"
+                message: "План подписки не найден"
+        "500":
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                code: "internal_server_error"
+                message: "Ошибка сервера при получении плана"
+  /subscriptions/purchase:
+    post:
+      summary: Оформить подписку
+      description: Оформляет подписку на выбранный тарифный план для текущего авторизованного пользователя.
+      operationId: purchaseSubscription
+      tags:
+        - subscription
+      security:
+        - bearerAuth: []
+      requestBody:
+        description: Идентификатор тарифного плана для подписки
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PurchaseSubscriptionRequest"
+      responses:
+        "200":
+          description: Подписка успешно оформлена
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PurchaseSubscriptionResponse"
+        "400":
+          description: Неверный запрос или недостаточно средств
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                code: "bad_request"
+                message: "Недостаточно средств для оформления подписки"
+        "401":
+          description: Неавторизованный доступ
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                code: "unauthorized"
+                message: "Not authenticated"
+        "500":
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                code: "internal_server_error"
+                message: "Внутренняя ошибка сервера"
+  /subscriptions/current:
+    get:
+      tags:
+        - subscription
+      summary: Получение текущей подписки пользователя
+      description: |
+        Возвращает данные о текущей подписке пользователя, если она существует.
+        Требуется аутентификация.
+      operationId: get_current_subscription
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Данные о текущей подписке
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubscriptionDetail"
+        "401":
+          description: Несанкционированный доступ
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: Not authenticated
+  /admin/check:
+    get:
+      tags:
+        - admin
+      security:
+        - bearerAuth: []
+      summary: Проверка статуса аутентификации администратора
+      description: Проверяет, аутентифицирован ли текущий пользователь как администратор.
+      operationId: admin_check
+      responses:
+        "200":
+          description: Пользователь аутентифицирован как администратор
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  isAuthenticated:
+                    type: boolean
+                    example: true
+        "401":
+          description: Пользователь не аутентифицирован
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: Недостаточно прав
+  /admin/login:
+    post:
+      tags:
+        - admin
+      summary: Вход администратора
+      description: |
+        Принимает email и пароль администратора.
+        Возвращает access-токен и refresh-токен для последующих запросов.
+      operationId: admin_login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginUserRequest"
+      responses:
+        "200":
+          description: Успешный вход
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  accessToken:
+                    type: string
+                  refreshToken:
+                    type: string
+                  admin:
+                    $ref: "#/components/schemas/AdminUserResponse"
+        "401":
+          description: Неверные учетные данные
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: Неверные учетные данные
+        "500":
+          description: Внутренняя ошибка сервера
+  /admin/refresh-token:
+    post:
+      tags:
+        - admin
+      summary: Обновление access-токена администратора
+      description: |
+        Принимает refresh-токен и выдает новый access-токен и refresh-токен.
+      operationId: admin_refresh_token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshTokenRequest"
+      responses:
+        "200":
+          description: Токен успешно обновлен
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  accessToken:
+                    type: string
+                  refreshToken:
+                    type: string
+        "401":
+          description: Недействительный или истекший refresh-токен
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: Invalid refresh token
+        "409":
+          description: Конфликт сервера, возможно, токен был использован
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: "Server conflict: Please try again."
+        "500":
+          description: Внутренняя ошибка сервера
+  /admin/logout:
+    post:
+      tags:
+        - admin
+      summary: Выход администратора
+      description: |
+        Принимает refresh-токен и удаляет его из системы, завершая сессию.
+      operationId: admin_logout
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshTokenRequest"
+      responses:
+        "200":
+          description: Успешный выход
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Logout successful
+        "400":
+          description: Refresh-токен не был предоставлен
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: Refresh token is required
+        "404":
+          description: Refresh-токен не найден или уже недействителен
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: Refresh токен не найден или уже недействителен
+        "500":
+          description: Внутренняя ошибка сервера
+  /admin/users:
+    get:
+      summary: Получить список пользователей
+      description: >
+        **Метод для получения списка пользователей.** Возвращает список пользователей с возможностью фильтрации по email или username.
+        **Параметры:**
+        - `page`: Номер страницы (по умолчанию 1).
+        - `limit`: Количество пользователей на странице (по умолчанию 25, 0 - все).
+        - `search`: Строка для поиска по email или username (по умолчанию пустая строка).
+      operationId: getAdminUsers
+      tags:
+        - admin
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: Номер страницы
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+        - name: limit
+          in: query
+          description: Количество пользователей на странице
+          schema:
+            type: integer
+            default: 25
+            minimum: 0
+        - name: search
+          in: query
+          description: Строка для поиска по email или username
+          schema:
+            type: string
+            default: ""
+      responses:
+        "200":
+          description: Успешно получен список пользователей
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetAdminUsersResponse"
+        "401":
+          description: Неавторизованный доступ
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                code: "unauthorized"
+                message: "Not authenticated"
+        "403":
+          description: Отсутствуют права доступа
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                code: "forbidden"
+                message: "Доступ запрещен"
+        "500":
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                code: "internal_server_error"
+                message: "Ошибка сервера при получении списка пользователей"
+  /admin/user/change/{userId}:
+    put:
+      summary: Изменить данные пользователя
+      description: >
+        **Метод для изменения данных пользователя администратором.** Принимает ID пользователя и данные для обновления.
+        **Параметры:**
+        - `userId`: ID пользователя, данные которого нужно изменить.
+        - `request_data`: Данные для обновления (username, email, wallet, currentSubscription).
+      operationId: adminChangeUser
+      tags:
+        - admin
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: ID пользователя
+          schema:
+            type: string
+            format: ObjectId
+      requestBody:
+        description: Данные для обновления пользователя
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminChangeUserRequest"
+      responses:
+        "200":
+          description: Данные пользователя успешно обновлены
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminChangeUserResponse"
+        "400":
+          description: Неверные данные запроса
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                code: "bad_request"
+                message: "Неверный формат email или имя пользователя слишком короткое"
+        "401":
+          description: Неавторизованный доступ
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                code: "unauthorized"
+                message: "Not authenticated"
+        "403":
+          description: Отсутствуют права доступа
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                code: "forbidden"
+                message: "Доступ запрещен"
+        "404":
+          description: Пользователь или план подписки не найдены
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                code: "not_found"
+                message: "Пользователь не найден"
+        "500":
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                code: "internal_server_error"
+                message: "Ошибка сервера при обновлении пользователя"
+  /admin/user/delete/{userId}:
+    delete:
+      summary: Удалить пользователя
+      description: >
+        **Метод для удаления пользователя администратором.** Принимает ID пользователя и удаляет его из базы данных.
+        **Параметры:**
+        - `userId`: ID пользователя, которого нужно удалить.
+      operationId: adminDeleteUser
+      tags:
+        - admin
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: ID пользователя
+          schema:
+            type: string
+            format: ObjectId
+      responses:
+        "200":
+          description: Пользователь успешно удален
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminDeleteUserResponse"
+        "401":
+          description: Неавторизованный доступ
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                code: "unauthorized"
+                message: "Not authenticated"
+        "403":
+          description: Отсутствуют права доступа
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                code: "forbidden"
+                message: "Доступ запрещен"
+        "404":
+          description: Пользователь не найден
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                code: "not_found"
+                message: "Пользователь не найден"
+        "500":
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                code: "internal_server_error"
+                message: "Ошибка сервера при удалении пользователя"
+  /admin/plans/create:
+    post:
+      tags:
+        - admin
+      security:
+        - bearerAuth: []
+      summary: Создание нового тарифного плана
+      description: |
+        Принимает данные о тарифном плане и создает новый план в системе.
+        Возвращает созданный план и сообщение об успехе.
+      operationId: admin_create_plan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminCreatePlanRequest"
+      responses:
+        "200":
+          description: Тарифный план успешно создан
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Тарифный план успешно создан
+                  plan:
+                    $ref: "#/components/schemas/SubscriptionPlan"
+        "400":
+          description: Ошибка валидации или план с таким именем уже существует
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: Plan name is required
+        "503":
+          description: База данных недоступна
+        "500":
+          description: Внутренняя ошибка сервера
+  /admin/plans/change/{planId}:
+    put:
+      tags:
+        - admin
+      security:
+        - bearerAuth: []
+      summary: Изменение существующего тарифного плана
+      description: |
+        Принимает ID тарифного плана и новые данные для обновления.
+        Возвращает измененный план.
+      operationId: admin_change_plan
+      parameters:
+        - name: planId
+          in: path
+          required: true
+          description: ID тарифного плана, который нужно изменить
+          schema:
+            type: string
+            format: ObjectId
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminChangePlanRequest"
+      responses:
+        "200":
+          description: Тарифный план успешно изменен
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  plan:
+                    $ref: "#/components/schemas/SubscriptionPlan"
+        "400":
+          description: Ошибка валидации (например, короткое имя, отрицательная цена) или план с таким именем уже существует.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: Plan name too short
+        "404":
+          description: Тарифный план не найден
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: Subscription plan not found
+        "503":
+          description: База данных недоступна
+        "500":
+          description: Внутренняя ошибка сервера
+  /admin/plans/delete/{planId}:
+    delete:
+      tags:
+        - admin
+      security:
+        - bearerAuth: []
+      summary: Удаление тарифного плана
+      description: |
+        Принимает ID тарифного плана и удаляет его, если он не используется ни одним пользователем.
+      operationId: admin_delete_plan
+      parameters:
+        - name: planId
+          in: path
+          required: true
+          description: ID тарифного плана, который нужно удалить
+          schema:
+            type: string
+            format: ObjectId
+      responses:
+        "200":
+          description: Тарифный план успешно удален
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Тарифный план успешно удален
+        "400":
+          description: План используется и не может быть удален
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: Cannot delete plan - it's currently used by users
+        "404":
+          description: Тарифный план не найден
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                    example: Subscription plan not found
+        "503":
+          description: База данных недоступна
+        "500":
+          description: Внутренняя ошибка сервера
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Код ошибки
+        message:
+          type: string
+          description: Сообщение об ошибке
+    CreateUserRequest:
+      type: object
+      required:
+        - username
+        - email
+        - password
+        - confirmPassword
+      properties:
+        username:
+          type: string
+          description: Имя пользователя.
+          minLength: 1
+          example: new_user
+        email:
+          type: string
+          format: email
+          description: Электронная почта пользователя.
+          example: user@example.com
+        password:
+          type: string
+          description: Пароль пользователя.
+          minLength: 8
+          example: Password123
+        confirmPassword:
+          type: string
+          description: Повтор пароля для подтверждения.
+          example: Password123
+        notifications:
+          $ref: "#/components/schemas/NotificationsEmbedded"
+          description: Настройки уведомлений.
+    NotificationsEmbedded:
+      type: object
+      properties:
+        email:
+          type: boolean
+          default: false
+          description: Получать уведомления по электронной почте.
+        push:
+          type: boolean
+          default: false
+          description: Получать push-уведомления.
+        newsletter:
+          type: boolean
+          default: false
+          description: Получать новостную рассылку.
+    CreateUserResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Пользователь создан
+        success:
+          type: boolean
+          example: true
+        user:
+          type: object
+          properties:
+            id:
+              type: string
+              example: 688cf49c36028e4887ecb5df
+            username:
+              type: string
+              example: new_user
+            email:
+              type: string
+              example: usergg@example.com
+            avatar:
+              type: string
+              example: /defaults/default-avatar.png
+            createdAt:
+              type: string
+              format: date-time
+              example: 2025-08-01T17:08:44.959043+00:00
+            role:
+              type: string
+              example: user
+            subscription:
+              type: object
+              properties:
+                currentPlan:
+                  type: object
+                  properties:
+                    planId:
+                      type: string
+                      example: 67f437687b06d9a11720a6ce
+                    startDate:
+                      type: string
+                      format: date-time
+                      example: 2025-08-01T17:08:44.959043+00:00
+                    endDate:
+                      type: string
+                      nullable: true
+                      example: null
+                    isActive:
+                      type: boolean
+                      example: true
+                    autoRenew:
+                      type: boolean
+                      example: false
+                    plan:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          example: 67f437687b06d9a11720a6ce
+                        name:
+                          type: string
+                          example: Базовый
+                        price:
+                          type: number
+                          example: 0
+                        features:
+                          type: array
+                          items:
+                            type: string
+                          example:
+                            - Full HD качество
+                            - 1 устройство
+                            - С рекламой
+                        renewalPeriod:
+                          type: number
+                          example: 30
+                        createdAt:
+                          type: string
+                          format: date-time
+                          example: 2025-04-07T20:36:56.674000
+                        updatedAt:
+                          type: string
+                          format: date-time
+                          example: 2025-04-18T20:41:39.084000
+                history:
+                  type: array
+                  items:
+                    type: object
+                  example: []
+            wallet:
+              type: object
+              properties:
+                balance:
+                  type: number
+                  example: 0
+                transactions:
+                  type: array
+                  items:
+                    type: object
+                  example: []
+        accessToken:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODhjZjQ5YzM2MDI4ZTQ4ODdlY2I1ZGYiLCJyb2xlIjoidXNlciIsImV4cCI6MTc1NDA2OTAyNH0.N0keKa6JA7iN0PnwDdaVmrdEfpHNewXrPWegSCrTWog
+        refreshToken:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODhjZjQ5YzM2MDI4ZTQ4ODdlY2I1ZGYiLCJyb2xlIjoidXNlciIsImV4cCI6MTc1NDY3MjkyNH0.kNCaYNC_Q5FU0iP2wmuwEe20pgjiRyzjI72ODwkAq9E
+    LoginUserRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          description: Email пользователя
+        password:
+          type: string
+          description: Пароль пользователя
+    LoginUserResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        accessToken:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODhiZTI0ZWIxYWIwNjZhMjI3OTUwMmIiLCJyb2xlIjoidXNlciIsImV4cCI6MTc1NDA2OTI1NH0.SPONy_QQ9MTTTyJ935Pha38-kpNoYZjTXgPMy4ktn7k
+        refreshToken:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODhiZTI0ZWIxYWIwNjZhMjI3OTUwMmIiLCJyb2xlIjoidXNlciIsImV4cCI6MTc1NDY3MzE1NH0.2eOdSFBVsoi94Ay6DUcsMQNFythfkkwNzjznTK0hJog
+        user:
+          type: object
+          properties:
+            _id:
+              type: string
+              example: 688be24eb1ab066a2279502b
+            username:
+              type: string
+              example: new_user
+            email:
+              type: string
+              example: user@example.com
+            avatar:
+              type: string
+              example: /defaults/default-avatar.png
+            notifications:
+              type: object
+              properties:
+                email:
+                  type: boolean
+                  example: true
+                push:
+                  type: boolean
+                  example: false
+                newsletter:
+                  type: boolean
+                  example: false
+            createdAt:
+              type: string
+              format: date-time
+              example: 2025-07-31T21:38:22.163000
+            updatedAt:
+              type: string
+              format: date-time
+              example: 2025-07-31T21:38:22.163000
+            role:
+              type: string
+              example: user
+            currentSubscription:
+              type: object
+              properties:
+                planId:
+                  type: object
+                  description: >
+                    Обратите внимание: в примере `planId` - пустой объект,
+                    но обычно он должен содержать строку с ID плана.
+                startDate:
+                  type: string
+                  format: date-time
+                  example: 2025-07-31T21:38:22.163000
+                endDate:
+                  type: string
+                  nullable: true
+                  example: null
+                isActive:
+                  type: boolean
+                  example: true
+                autoRenew:
+                  type: boolean
+                  example: false
+                adminNote:
+                  type: string
+                  nullable: true
+                  example: null
+                plan:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      example: 67f437687b06d9a11720a6ce
+                    name:
+                      type: string
+                      example: Базовый
+                    price:
+                      type: number
+                      example: 0
+                    features:
+                      type: array
+                      items:
+                        type: string
+                      example:
+                        - Full HD качество
+                        - 1 устройство
+                        - С рекламой
+                    renewalPeriod:
+                      type: number
+                      example: 30
+                    createdAt:
+                      type: string
+                      format: date-time
+                      example: 2025-04-07T20:36:56.674000
+                    updatedAt:
+                      type: string
+                      format: date-time
+                      example: 2025-04-18T20:41:39.084000
+            wallet:
+              type: object
+              properties:
+                balance:
+                  type: number
+                  example: 0
+                transactionIds:
+                  type: array
+                  items:
+                    type: string
+                  example: []
+            history:
+              type: array
+              items:
+                type: object
+              example: []
+    GetUserResponse:
+      type: object
+      properties:
+        user:
+          type: object
+          properties:
+            id:
+              type: string
+              example: 688be24eb1ab066a2279502b
+            username:
+              type: string
+              example: new_user
+            email:
+              type: string
+              example: user@example.com
+            avatar:
+              type: string
+              example: /defaults/default-avatar.png
+            createdAt:
+              type: string
+              format: date-time
+              example: 2025-07-31T21:38:22.163000
+            wallet:
+              type: object
+              properties:
+                balance:
+                  type: number
+                  example: 0
+                transactions:
+                  type: array
+                  items:
+                    type: object
+                  example: []
+            subscription:
+              type: object
+              properties:
+                currentPlan:
+                  type: object
+                  properties:
+                    planId:
+                      type: string
+                      example: 67f437687b06d9a11720a6ce
+                    startDate:
+                      type: string
+                      format: date-time
+                      example: 2025-07-31T21:38:22.163000
+                    endDate:
+                      type: string
+                      nullable: true
+                      example: null
+                    isActive:
+                      type: boolean
+                      example: true
+                    autoRenew:
+                      type: boolean
+                      example: false
+                    plan:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          example: 67f437687b06d9a11720a6ce
+                        name:
+                          type: string
+                          example: Базовый
+                        price:
+                          type: number
+                          example: 0
+                        features:
+                          type: array
+                          items:
+                            type: string
+                          example:
+                            - Full HD качество
+                            - 1 устройство
+                            - С рекламой
+                history:
+                  type: array
+                  items:
+                    type: object
+                  example: []
+    UpdateUserRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          description: Новое имя пользователя
+        email:
+          type: string
+          format: email
+          description: Новый email пользователя
+        newPassword:
+          type: string
+          description: Новый пароль
+        currentPassword:
+          type: string
+          description: Текущий пароль для подтверждения
+    UpdateUserResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Профиль успешно обновлен
+        user:
+          $ref: "#/components/schemas/UserCore"
+    LogoutUserResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+    RefreshTokenRequest:
+      type: object
+      required:
+        - refreshToken
+      properties:
+        refreshToken:
+          type: string
+          description: Refresh-токен для обновления access-токена
+    RefreshTokenResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+    UploadAvatarResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        avatarUrl:
+          type: string
+          format: uri
+          description: URL нового аватара.
+          example: /public/uploads/avatars/688be24eb1ab066a2279502b/688be24eb1ab066a2279502b-5f9efddcf5384635bce679798c82138f.png
+        user:
+          $ref: "#/components/schemas/UserCore"
+    Transaction:
+      type: object
+      properties:
+        _id:
+          type: string
+          format: ObjectId
+        amount:
+          type: number
+        type:
+          type: string
+        description:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    WalletResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        balance:
+          type: number
+          example: 0
+        transactions:
+          type: array
+          items:
+            type: object
+          example: []
+    Wallet:
+      type: object
+      properties:
+        balance:
+          type: number
+        transactions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Transaction"
+    DepositWalletRequest:
+      type: object
+      required:
+        - amount
+      properties:
+        amount:
+          type: number
+          minimum: 0.01
+          description: Сумма пополнения
+    DepositWalletResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        newBalance:
+          type: number
+          example: 1000
+        transaction:
+          type: object
+          properties:
+            _id:
+              type: string
+              example: 688d23f1e5c08aabed4eeef6
+            userId:
+              type: string
+              example: 688be24eb1ab066a2279502b
+            amount:
+              type: number
+              example: 1000
+            type:
+              type: string
+              example: deposit
+            status:
+              type: string
+              example: completed
+            description:
+              type: string
+              example: Пополнение баланса на 1000.0 RUB
+            paymentMethod:
+              type: string
+              example: manual
+            currency:
+              type: string
+              example: RUB
+            metadata:
+              type: string
+              nullable: true
+              example: null
+            date:
+              type: string
+              format: date-time
+              example: 2025-08-01T20:30:41.742453Z
+            createdAt:
+              type: string
+              format: date-time
+              example: 2025-08-01T20:30:41.742453Z
+            updatedAt:
+              type: string
+              format: date-time
+              example: 2025-08-01T20:30:41.742453Z
+    SubscriptionPlanResponse:
+      type: array
+      items:
+        type: object
+        properties:
+          _id:
+            type: string
+            description: Уникальный идентификатор тарифного плана.
+          name:
+            type: string
+            description: Название тарифного плана.
+          price:
+            type: number
+            description: Стоимость подписки.
+          renewalPeriod:
+            type: number
+            description: Период действия подписки в днях.
+          features:
+            type: array
+            description: Список преимуществ и функций, включенных в план.
+            items:
+              type: string
+          createdAt:
+            type: string
+            format: date-time
+            description: Дата и время создания тарифного плана.
+          updatedAt:
+            type: string
+            format: date-time
+            description: Дата и время последнего обновления тарифного плана.
+      example:
+        - _id: 67f437687b06d9a11720a6ce
+          name: Базовый
+          price: 0
+          renewalPeriod: 30
+          features:
+            - Full HD качество
+            - 1 устройство
+            - С рекламой
+          createdAt: "2025-04-07T20:36:56.674000"
+          updatedAt: "2025-04-18T20:41:39.084000"
+        - _id: 67f437687b06d9a11720a6d1
+          name: Популярный
+          price: 899
+          renewalPeriod: 31
+          features:
+            - 4K Ultra HD + HDR
+            - До 5 устройств
+            - Без рекламы
+            - Оффлайн просмотр
+          createdAt: "2025-04-07T20:36:56.727000"
+          updatedAt: "2025-05-23T22:22:21.536000"
+        - _id: 67f437687b06d9a11720a6d4
+          name: Премиум+
+          price: 1199
+          renewalPeriod: 31
+          features:
+            - 4K Ultra HD + HDR + Dolby Vision
+            - До 7 устройств
+            - Без рекламы + ранний доступ
+            - Оффлайн-просмотр + эксклюзивы
+          createdAt: "2025-04-07T20:36:56.740000"
+          updatedAt: "2025-04-07T20:36:56.740000"
+    PurchaseSubscriptionRequest:
+      type: object
+      required:
+        - planId
+      properties:
+        planId:
+          type: string
+          format: ObjectId
+          description: ID тарифного плана для покупки
+    PurchaseSubscriptionResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        subscription:
+          type: object
+          properties:
+            _id:
+              type: string
+              example: 688d275ce5c08aabed4eeefe
+            userId:
+              type: string
+              example: 688be24eb1ab066a2279502b
+            planId:
+              type: string
+              example: 67f437687b06d9a11720a6d1
+            startDate:
+              type: string
+              format: date-time
+              example: 2025-08-01T20:45:16.555124+00:00
+            endDate:
+              type: string
+              format: date-time
+              example: 2025-09-01T20:45:16.555124+00:00
+            isActive:
+              type: boolean
+              example: true
+            autoRenew:
+              type: boolean
+              example: true
+            changedByAdmin:
+              type: boolean
+              example: false
+            adminNote:
+              type: string
+              example: Покупка через баланс
+            createdAt:
+              type: string
+              format: date-time
+              example: 2025-08-01T20:45:16.555124+00:00
+            updatedAt:
+              type: string
+              format: date-time
+              example: 2025-08-01T20:45:16.555124+00:00
+            plan:
+              type: object
+              properties:
+                _id:
+                  type: string
+                  example: 67f437687b06d9a11720a6d1
+                name:
+                  type: string
+                  example: Популярный
+                price:
+                  type: number
+                  example: 899
+                renewalPeriod:
+                  type: number
+                  example: 31
+                features:
+                  type: array
+                  items:
+                    type: string
+                  example:
+                    - 4K Ultra HD + HDR
+                    - До 5 устройств
+                    - Без рекламы
+                    - Оффлайн просмотр
+                createdAt:
+                  type: string
+                  format: date-time
+                  example: 2025-04-07T20:36:56.727000
+                updatedAt:
+                  type: string
+                  format: date-time
+                  example: 2025-05-23T22:22:21.536000
+        newBalance:
+          type: number
+          example: 303
+        transaction:
+          type: object
+          properties:
+            _id:
+              type: string
+              example: 688d275ce5c08aabed4eeefd
+            userId:
+              type: string
+              example: 688be24eb1ab066a2279502b
+            amount:
+              type: number
+              example: -899
+            type:
+              type: string
+              example: subscription
+            status:
+              type: string
+              example: completed
+            description:
+              type: string
+              example: Оплата подписки Популярный
+            paymentMethod:
+              type: string
+              example: balance
+            currency:
+              type: string
+              example: RUB
+            metadata:
+              type: object
+              properties:
+                planId:
+                  type: string
+                  example: 67f437687b06d9a11720a6d1
+                planName:
+                  type: string
+                  example: Популярный
+                type:
+                  type: string
+                  example: subscription_payment
+            date:
+              type: string
+              format: date-time
+              example: 2025-08-01T20:45:16.555124+00:00
+            createdAt:
+              type: string
+              format: date-time
+              example: 2025-08-01T20:45:16.555124+00:00
+            updatedAt:
+              type: string
+              format: date-time
+              example: 2025-08-01T20:45:16.555124+00:00
+        paymentRequired:
+          type: boolean
+          example: false
+        requiredAmount:
+          type: number
+          example: 0
+    SubscriptionDetail:
+      type: object
+      properties:
+        planId:
+          type: string
+          format: ObjectId
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+        isActive:
+          type: boolean
+        autoRenew:
+          type: boolean
+        adminNote:
+          type: string
+        plan:
+          $ref: "#/components/schemas/SubscriptionPlanResponse"
+    UserCore:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 688be24eb1ab066a2279502b
+        username:
+          type: string
+          example: new_user
+        email:
+          type: string
+          example: user@example.com
+        avatar:
+          type: string
+          example: /defaults/default-avatar.png
+        notifications:
+          type: object
+          properties:
+            email:
+              type: boolean
+              example: true
+            push:
+              type: boolean
+              example: false
+            newsletter:
+              type: boolean
+              example: false
+        createdAt:
+          type: string
+          format: date-time
+          example: 2025-07-31T21:38:22.163000
+        updatedAt:
+          type: string
+          format: date-time
+          example: 2025-07-31T21:38:22.163000
+        role:
+          type: string
+          example: user
+        currentSubscription:
+          type: object
+          properties:
+            planId:
+              type: object
+              description: >
+                Обратите внимание: в примере `planId` - пустой объект,
+                но обычно он должен содержать строку с ID плана.
+            startDate:
+              type: string
+              format: date-time
+              example: 2025-07-31T21:38:22.163000
+            endDate:
+              type: string
+              nullable: true
+              example: null
+            isActive:
+              type: boolean
+              example: true
+            autoRenew:
+              type: boolean
+              example: false
+            adminNote:
+              type: string
+              nullable: true
+              example: null
+            plan:
+              type: object
+              properties:
+                id:
+                  type: string
+                  example: 67f437687b06d9a11720a6ce
+                name:
+                  type: string
+                  example: Базовый
+                price:
+                  type: number
+                  example: 0
+                features:
+                  type: array
+                  items:
+                    type: string
+                  example:
+                    - Full HD качество
+                    - 1 устройство
+                    - С рекламой
+                renewalPeriod:
+                  type: number
+                  example: 30
+                createdAt:
+                  type: string
+                  format: date-time
+                  example: 2025-04-07T20:36:56.674000
+                updatedAt:
+                  type: string
+                  format: date-time
+                  example: 2025-04-18T20:41:39.084000
+        wallet:
+          type: object
+          properties:
+            balance:
+              type: number
+              example: 0
+            transactionIds:
+              type: array
+              items:
+                type: string
+              example: []
+        history:
+          type: array
+          items:
+            type: object
+          example: []
+    FullUser:
+      allOf:
+        - $ref: "#/components/schemas/UserCore"
+        - type: object
+          properties:
+            subscriptionHistory:
+              type: array
+              items:
+                $ref: "#/components/schemas/SubscriptionDetail"
+            walletHistory:
+              type: array
+              items:
+                $ref: "#/components/schemas/Transaction"
+    AdminUserResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: ObjectId
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          example: admin
+    GetAdminUsersResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        users:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminUserListItem"
+        total:
+          type: integer
+        page:
+          type: integer
+        pages:
+          type: integer
+    AdminUserListItem:
+      type: object
+      properties:
+        _id:
+          type: string
+          format: ObjectId
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        currentSubscription:
+          $ref: "#/components/schemas/AdminUserSubscription"
+        wallet:
+          $ref: "#/components/schemas/AdminUserWallet"
+        createdAt:
+          type: string
+          format: date-time
+    AdminUserSubscription:
+      type: object
+      nullable: true
+      properties:
+        planId:
+          type: string
+          format: ObjectId
+          nullable: true
+        startDate:
+          type: string
+          format: date-time
+          nullable: true
+        endDate:
+          type: string
+          format: date-time
+          nullable: true
+        isActive:
+          type: boolean
+        autoRenew:
+          type: boolean
+        adminNote:
+          type: string
+          nullable: true
+        plan:
+          $ref: "#/components/schemas/SubscriptionPlanResponse"
+          nullable: true
+    AdminUserWallet:
+      type: object
+      properties:
+        balance:
+          type: number
+    AdminChangeUserRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          description: Имя пользователя.
+          example: new_user
+        email:
+          type: string
+          format: email
+          description: Email пользователя.
+          example: user@example.com
+        wallet:
+          type: object
+          description: Обновление данных кошелька.
+          properties:
+            balance:
+              type: number
+              description: Новый баланс кошелька.
+              example: 11111
+        currentSubscription:
+          type: object
+          description: Обновление данных подписки.
+          properties:
+            planId:
+              type: string
+              description: ID нового плана подписки.
+              example: 67f437687b06d9a11720a6ce
+            isActive:
+              type: boolean
+              description: Статус активности подписки.
+              example: true
+            autoRenew:
+              type: boolean
+              description: Статус автоматического продления.
+              example: false
+            adminNote:
+              type: string
+              description: Примечание администратора.
+              example: Comment
+            endDate:
+              type: string
+              format: date
+              description: Дата окончания подписки.
+              example: 2222-02-12
+    AdminChangeUserResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        user:
+          $ref: "#/components/schemas/UserCore"
+    AdminDeleteUserResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+    AdminChangePlanRequest:
+      type: object
+      title: AdminChangePlanRequest
+      properties:
+        _id:
+          type: string
+          description: Уникальный идентификатор плана.
+          example: 688de47b6276a4574e9e809b
+        name:
+          type: string
+          description: Имя тарифного плана.
+          example: new_plan_change
+        price:
+          type: number
+          format: float
+          description: Стоимость.
+          example: 77
+        renewalPeriod:
+          type: integer
+          description: Период продления в днях.
+          example: 58
+        features:
+          type: array
+          description: Список функций.
+          items:
+            type: string
+          example:
+            - Feature
+            - Change
+        createdAt:
+          type: object
+          nullable: true
+          description: Дата и время создания плана.
+          example: null
+        updatedAt:
+          type: object
+          nullable: true
+          description: Дата и время последнего обновления плана.
+          example: null
+        description:
+          type: string
+          description: Описание плана.
+          example: Change
+    SubscriptionPlan:
+      type: object
+      title: SubscriptionPlan
+      properties:
+        id:
+          type: string
+          format: ObjectId
+          description: Уникальный ID плана
+        name:
+          type: string
+          description: Имя плана
+        price:
+          type: number
+          format: float
+          description: Стоимость
+        renewalPeriod:
+          type: integer
+          description: Период продления в днях
+        features:
+          type: array
+          items:
+            type: string
+          description: Список функций
+        createdAt:
+          type: string
+          format: date-time
+          description: Дата создания плана
+        updatedAt:
+          type: string
+          format: date-time
+          description: Дата последнего обновления
+    AdminCreatePlanRequest:
+      type: object
+      required:
+        - name
+        - price
+        - renewalPeriod
+        - features
+      properties:
+        name:
+          type: string
+          description: Название плана.
+          example: new_plan
+        description:
+          type: string
+          description: Описание плана.
+          example: Description
+        price:
+          type: number
+          format: float
+          description: Стоимость плана.
+          example: 99.96
+        renewalPeriod:
+          type: integer
+          description: Период продления в днях.
+          example: 30
+        features:
+          type: array
+          description: Список функций, включённых в план.
+          items:
+            type: string
+          example:
+            - Feature
