@@ -35,7 +35,7 @@ ALLOWED_ORIGINS = [
     'https://api.vosmerka228.ru',
     'http://localhost:5173',
     'https://m.vosmerka228.ru',
-    os.getenv("FRONTEND_URL", "http://localhost:5173")
+    os.getenv("FRONTEND_URL", "http://localhost:5173"),
 ]
 
 

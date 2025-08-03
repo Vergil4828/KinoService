@@ -14,6 +14,7 @@ from backend.core.config import (
     REFRESH_SECRET_KEY,
     JWT_ALGORITHM
 )
+from pymongo.errors import DuplicateKeyError
 from fastapi import HTTPException, status, Request, UploadFile, File, Depends
 from typing import Dict, Any
 from jose import JWTError, jwt

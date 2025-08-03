@@ -15,7 +15,7 @@ from backend.models.embedded import RefreshTokenEmbedded # Вложенная м
 
 class AdminAuthService:
     @staticmethod
-    async def admin_check(admin_user: User = Depends(get_admin_user)):
+    async def admin_check(admin_user: User = Depends(get_admin_user)):   
         return {"isAuthenticated": True}
     
     @staticmethod
