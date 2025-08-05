@@ -583,7 +583,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/LoginUserRequest"
+              $ref: "#/components/schemas/LoginAdminRequest"
       responses:
         "200":
           description: Успешный вход
@@ -2002,6 +2002,7 @@ components:
         email:
           type: string
           format: email
+          example: admin@example.com
         role:
           type: string
           example: admin
@@ -2234,3 +2235,18 @@ components:
             type: string
           example:
             - Feature
+    LoginAdminRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          description: Email администратора
+          example: admin@example.com
+        password:
+          type: string
+          description: Пароль администратора
+          example: string321
