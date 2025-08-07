@@ -45,7 +45,9 @@ class CreateUserRequest(BaseModel):
     @field_validator("username", "password", "confirmPassword", mode="before")
     @classmethod
     def strip_whitespace(cls, v: str) -> str:
-        return v.strip()
+        if isinstance(v, str):
+            return v.strip()
+        return v
 
     password: str = Field(min_length=8)
 
