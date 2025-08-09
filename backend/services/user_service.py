@@ -152,7 +152,7 @@ class UserService:
             user = await User.find_one(User.email == request_data.email)
             if not user:
                 raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
+                    status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Invalid email or password",
                 )
 
@@ -160,7 +160,7 @@ class UserService:
                 request_data.password.encode("utf-8"), user.password.encode("utf-8")
             ):
                 raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
+                    status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Invalid email or password",
                 )
 

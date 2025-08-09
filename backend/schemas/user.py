@@ -9,10 +9,11 @@ from pydantic import (
     EmailStr,
     ValidationInfo,
 )
+
 from beanie import Document, PydanticObjectId, Link
 from pymongo import IndexModel
 from pathlib import Path
-import pytz
+import pytz, re
 
 
 class UserResponseBase(BaseModel):
@@ -34,11 +35,11 @@ class UserResponseBase(BaseModel):
 
 
 class CreateUserRequest(BaseModel):
-    username: str = Field(min_length=1)
+    username: str = Field(min_length=1, max_length=50)
     email: EmailStr
-    password: str
-    confirmPassword: str
-    notifications: Optional["NotificationsEmbedded"] = Field(
+    password: str = Field(min_length=8, max_length=72)
+    confirmPassword: str = Field(min_length=8, max_length=72)
+    notifications: Optional[NotificationsEmbedded] = Field(
         default_factory=lambda: NotificationsEmbedded()
     )
 
@@ -49,7 +50,52 @@ class CreateUserRequest(BaseModel):
             return v.strip()
         return v
 
-    password: str = Field(min_length=8)
+    @field_validator("username")
+    @classmethod
+    def validate_username_characters(cls, v: str) -> str:
+        """
+        Username может содержать только:
+        - латинские буквы (a-z, A-Z)
+        - цифры (0-9)
+        - дефис (-)
+        - подчеркивание (_)
+        """
+        if not re.match(r'^[a-zA-Z0-9_-]+$', v):
+            raise ValueError(
+                "Username может содержать только латинские буквы, цифры, дефис (-) и подчеркивание (_)"
+            )
+
+        if v.startswith('-') or v.endswith('-'):
+            raise ValueError("Username не может начинаться или заканчиваться дефисом")
+
+        if v.startswith('_') or v.endswith('_'):
+            raise ValueError("Username не может начинаться или заканчиваться подчеркиванием")
+
+        if '--' in v or '__' in v or '-_' in v or '_-' in v:
+            raise ValueError("Username не может содержать последовательные специальные символы")
+
+        return v
+
+    @field_validator("email", mode="after")
+    @classmethod
+    def validate_email_additional(cls, v: EmailStr) -> EmailStr:
+
+        email_str = str(v)
+        local_part = email_str.split('@')[0]
+        if local_part.startswith('.') or local_part.endswith('.'):
+            raise ValueError("Email не может начинаться или заканчиваться точкой в локальной части")
+
+        if '..' in local_part:
+            raise ValueError("Email не может содержать последовательные точки")
+
+        if len(local_part) > 64:
+            raise ValueError("Локальная часть email не может превышать 64 символа")
+
+        domain = email_str.split('@')[1]
+        if len(domain) > 255:
+            raise ValueError("Доменная часть email не может превышать 63 символа")
+
+        return v
 
     @field_validator("confirmPassword")
     @classmethod

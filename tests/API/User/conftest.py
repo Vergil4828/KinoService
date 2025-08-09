@@ -57,29 +57,24 @@ def prepare_db_without_basic_plan():
     asyncio.run(cleanup())
 
 
-@pytest.fixture(scope="class")
+@pytest.fixture(scope="function")
 def registered_user_in_db(api_client):
-    user_data = {
-        "username": "registered_user",
-        "email": "user@example.com",
-        "password": "Password123",
-        "confirmPassword": "Password123",
-        "notifications": {
-            "email": False,
-            "push": False,
-            "newsletter": False,
-        },
-    }
+    registered_emails = []
 
-    async def setup_user():
+    async def create_user(user_data):
         response = await api_client.register_user(user_data)
-        return response
+        assert response.status_code == 201
+        registered_emails.append(user_data["email"])
+        return user_data, response
 
-    async def cleanup_user():
+    yield create_user
+    if registered_emails:
         client = AsyncIOMotorClient("mongodb://localhost:27018/?directConnection=true")
         db = client["8_films"]
-        await db.users.delete_one({"email": user_data["email"]})
 
-    response = asyncio.run(setup_user())
-    yield user_data, response
-    asyncio.run(cleanup_user())
+        async def run_cleanup():
+            for email in registered_emails:
+                await db.users.delete_one({"email": email})
+
+        asyncio.run(run_cleanup())
+        client.close()
