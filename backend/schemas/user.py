@@ -107,15 +107,35 @@ class CreateUserRequest(BaseModel):
 
 class LoginUserRequest(BaseModel):
     email: EmailStr
-    password: str
+    password: str = Field(min_length=8, max_length=72)
 
     @field_validator("password", mode="before")
     @classmethod
     def strip_whitespace(cls, v: str) -> str:
-        return v.strip()
+        if isinstance(v, str):
+            return v.strip()
+        return v
 
-    password: str = Field(min_length=8)
+    @field_validator("email", mode="after")
+    @classmethod
+    def validate_email_additional(cls, v: EmailStr) -> EmailStr:
+        email_str = str(v)
+        local_part = email_str.split('@')[0]
 
+        if local_part.startswith('.') or local_part.endswith('.'):
+            raise ValueError("Email не может начинаться или заканчиваться точкой в локальной части")
+
+        if '..' in local_part:
+            raise ValueError("Email не может содержать последовательные точки")
+
+        if len(local_part) > 64:
+            raise ValueError("Локальная часть email не может превышать 64 символа")
+
+        domain = email_str.split('@')[1]
+        if len(domain) > 255:
+            raise ValueError("Доменная часть email не может превышать 63 символов")
+
+        return v
 
 class UpdateUserRequest(BaseModel):
     username: Optional[str] = Field(None, min_length=1)

@@ -1,5 +1,5 @@
 import pytest, asyncio
-from tests.API.User.user_client import UserClient
+from user_client import UserClient
 from motor.motor_asyncio import AsyncIOMotorClient
 
 
