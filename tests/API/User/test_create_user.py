@@ -1,10 +1,11 @@
 import pytest
-from user_test_data import CreateUserData
+from .user_test_data import CreateUserData
 
 
+@pytest.mark.asyncio
 @pytest.mark.positive
 class TestCreateUserPositive:
-    @pytest.mark.asyncio
+
     @pytest.mark.parametrize(
         "username, email, password, confirmPassword, notification_bool, ids",
         CreateUserData.positive_test_data,
@@ -12,8 +13,8 @@ class TestCreateUserPositive:
     )
     async def test_create_user(
         self,
-        api_client,
-        clean_all_users,
+        api_client_user,
+        clean_user_now,
         username,
         email,
         password,
@@ -32,151 +33,151 @@ class TestCreateUserPositive:
                 "newsletter": notification_bool,
             },
         }
-        response = await api_client.register_user(user_data)
+        response = await api_client_user.register_user(user_data)
         assert response.status_code == 201
         assert response.json()["user"]["email"] == email
         assert "accessToken" in response.json()
         assert "refreshToken" in response.json()
-        await clean_all_users(email)
+        await clean_user_now(email)
 
 
+@pytest.mark.asyncio
 @pytest.mark.positive
 class TestCreateUserValidValidation:
-    @pytest.mark.asyncio
+
     @pytest.mark.parametrize(
         "username, status_code, ids",
         CreateUserData.test_data_valid_username,
         ids=[data[2] for data in CreateUserData.test_data_valid_username],
     )
     async def test_create_user_valid_username(
-        self, api_client, username, status_code, ids, clean_all_users
+        self, api_client_user, username, status_code, ids, clean_user_now
     ):
         user_data = CreateUserData.base_user_data.copy()
         user_data["username"] = username
-        response = await api_client.register_user(user_data)
+        response = await api_client_user.register_user(user_data)
         assert response.status_code == status_code
-        await clean_all_users(user_data["email"])
+        await clean_user_now(user_data["email"])
 
-    @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "email, status_code, ids",
         CreateUserData.test_data_valid_email,
         ids=[data[2] for data in CreateUserData.test_data_valid_email],
     )
     async def test_create_user_valid_email(
-        self, api_client, email, status_code, ids, clean_all_users
+        self, api_client_user, email, status_code, ids, clean_user_now
     ):
         user_data = CreateUserData.base_user_data.copy()
         user_data["email"] = email
-        response = await api_client.register_user(user_data)
+        response = await api_client_user.register_user(user_data)
         assert response.status_code == status_code
-        await clean_all_users(user_data["email"])
+        await clean_user_now(user_data["email"])
 
-    @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "password, status_code, ids",
         CreateUserData.test_data_valid_password,
         ids=[data[2] for data in CreateUserData.test_data_valid_password],
     )
     async def test_create_user_valid_passwords(
-        self, api_client, password, status_code, ids, clean_all_users
+        self, api_client_user, password, status_code, ids, clean_user_now
     ):
         user_data = CreateUserData.base_user_data.copy()
         user_data["password"] = password
         user_data["confirmPassword"] = password
 
-        response = await api_client.register_user(user_data)
+        response = await api_client_user.register_user(user_data)
         assert response.status_code == status_code
-        await clean_all_users(user_data["email"])
+        await clean_user_now(user_data["email"])
 
 
+@pytest.mark.asyncio
 @pytest.mark.negative
 class TestCreateUserInvalidValidation:
-    @pytest.mark.asyncio
+
     @pytest.mark.parametrize(
         "username, status_code, ids",
         CreateUserData.test_data_invalid_username,
         ids=[data[2] for data in CreateUserData.test_data_invalid_username],
     )
     async def test_create_user_invalid_username(
-        self, api_client, username, status_code, ids
+        self, api_client_user, username, status_code, ids
     ):
         user_data = CreateUserData.base_user_data.copy()
         user_data["username"] = username
-        response = await api_client.register_user(user_data)
+        response = await api_client_user.register_user(user_data)
         assert response.status_code == status_code
 
-    @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "email, status_code, ids",
         CreateUserData.test_data_invalid_email,
         ids=[data[2] for data in CreateUserData.test_data_invalid_email],
     )
-    async def test_create_user_invalid_email(self, api_client, email, status_code, ids):
+    async def test_create_user_invalid_email(
+        self, api_client_user, email, status_code, ids
+    ):
         user_data = CreateUserData.base_user_data.copy()
         user_data["email"] = email
-        response = await api_client.register_user(user_data)
+        response = await api_client_user.register_user(user_data)
         assert response.status_code == status_code
 
-    @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "password, confirmPassword, status_code, ids",
         CreateUserData.test_data_invalid_password,
         ids=[data[3] for data in CreateUserData.test_data_invalid_password],
     )
     async def test_create_user_invalid_passwords(
-        self, api_client, password, confirmPassword, status_code, ids, clean_all_users
+        self,
+        api_client_user,
+        password,
+        confirmPassword,
+        status_code,
+        ids,
+        clean_all_users,
     ):
         user_data = CreateUserData.base_user_data.copy()
         user_data["password"] = password
         user_data["confirmPassword"] = confirmPassword
 
-        response = await api_client.register_user(user_data)
+        response = await api_client_user.register_user(user_data)
         assert response.status_code == status_code
 
-    @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "field_notifications, value, status_code, ids",
         CreateUserData.test_data_invalid_notifications,
     )
     async def test_create_user_invalid_notifications_fields(
-        self, api_client, field_notifications, value, status_code, ids
+        self, api_client_user, field_notifications, value, status_code, ids
     ):
         user_data = CreateUserData.base_user_data.copy()
         user_data["notifications"][field_notifications] = value
-        response = await api_client.register_user(user_data)
+        response = await api_client_user.register_user(user_data)
         assert response.status_code == status_code
 
 
+@pytest.mark.asyncio
 @pytest.mark.negative
 class TestCreateUserNegative:
-    @pytest.mark.asyncio
+
     async def test_create_user_without_basic_plan(
         self,
-        api_client,
-        clean_all_users,
+        api_client_user,
         prepare_db_without_basic_plan,
     ):
         user_data = CreateUserData.base_user_data.copy()
-        response = await api_client.register_user(user_data)
+        response = await api_client_user.register_user(user_data)
         assert response.status_code == 500
         assert response.json()["detail"] == "Ошибка сервера при создании пользователя"
-        await clean_all_users(user_data["email"])
 
-    @pytest.mark.asyncio
     async def test_create_user_with_exist_email_in_database(
-        self, api_client, registered_user_in_db, clean_all_users
+        self, api_client_user, registered_user_in_db_per_function, clean_all_users
     ):
-        await registered_user_in_db(CreateUserData.base_user_data.copy())
 
-        response_register = await api_client.register_user(
-            CreateUserData.base_user_data.copy()
-        )
+        user_data, _ = await registered_user_in_db_per_function(None)
+
+        response_register = await api_client_user.register_user(user_data)
         assert response_register.status_code == 409
         assert response_register.json()["detail"] == "Email уже занят"
-        await clean_all_users(CreateUserData.base_user_data.copy()["email"])
 
-    @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "field_to_remove, status_code",
         [
@@ -188,21 +189,22 @@ class TestCreateUserNegative:
         ],
     )
     async def test_create_user_missing_required_field(
-        self, api_client, field_to_remove, status_code, clean_all_users
+        self, api_client_user, field_to_remove, status_code, clean_user_now
     ):
         user_data_without_field = CreateUserData.base_user_data.copy()
         del user_data_without_field[field_to_remove]
-        response = await api_client.register_user(user_data_without_field)
+        response = await api_client_user.register_user(user_data_without_field)
         assert response.status_code == status_code
         if response.status_code == 201:
-            await clean_all_users(user_data_without_field["email"])
+            await clean_user_now(user_data_without_field["email"])
 
     # В ТЕСТ ИТ ДОБАВИТЬ, НЕДОСТАЮЩИЕ ДЛЯ НОТИФИКАЦИИ ( ПУСТЫЕ ЗНАЧЕНИЕ)
     # добавить тест кейс, где будет неправильные значение для полей, в том числе нотификация
     # исправить, удалить предусловия там, где они не нужны
 
-    @pytest.mark.asyncio
-    async def test_create_user_with_duplicate_field(self, api_client, clean_all_users):
+    async def test_create_user_with_duplicate_field(
+        self, api_client_user, clean_user_now
+    ):
         user_data = {
             "username": "new_user",
             "username": "dupli_user",
@@ -214,8 +216,8 @@ class TestCreateUserNegative:
             "notifications": {"email": False, "push": False, "newsletter": False},
         }
 
-        response = await api_client.register_user(user_data)
+        response = await api_client_user.register_user(user_data)
         assert response.status_code == 201
         assert response.json()["user"]["username"] == "dupli_user"
         assert response.json()["user"]["email"] == "dupli@example.com"
-        await clean_all_users(response.json()["user"]["email"])
+        await clean_user_now(response.json()["user"]["email"])

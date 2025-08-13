@@ -18,19 +18,25 @@ class UserClient:
     async def get_user_data(self, token):
         async with httpx.AsyncClient() as client:
             url = f"{self.base_url}/api/user/data"
-            headers = {"Authorization": f"Bearer {token}"}
+            headers = {}
+            if token:
+                headers = {"Authorization": f"Bearer {token}"}
             return await client.get(url, headers=headers)
 
     async def update_user(self, token, update_data):
         async with httpx.AsyncClient() as client:
             url = f"{self.base_url}/api/update/user"
-            headers = {"Authorization": f"Bearer {token}"}
+            headers = {}
+            if token:
+                headers = {"Authorization": f"Bearer {token}"}
             return await client.put(url, json=update_data, headers=headers)
 
     async def logout_user(self, token):
         async with httpx.AsyncClient() as client:
             url = f"{self.base_url}/api/logout"
-            headers = {"Authorization": f"Bearer {token}"}
+            headers = {}
+            if token:
+                headers = {"Authorization": f"Bearer {token}"}
             return await client.post(url, headers=headers)
 
     async def get_new_tokens(self, refresh_token):
@@ -41,6 +47,8 @@ class UserClient:
     async def upload_avatar(self, token, avatar):
         async with httpx.AsyncClient() as client:
             url = f"{self.base_url}/api/user/avatar"
-            headers = {"Authorization": f"Bearer {token}"}
+            headers = {}
+            if token:
+                headers = {"Authorization": f"Bearer {token}"}
             files = {"avatar": avatar}
             return await client.post(url, headers=headers, files=files)
