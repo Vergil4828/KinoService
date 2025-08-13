@@ -138,14 +138,64 @@ class LoginUserRequest(BaseModel):
         return v
 
 class UpdateUserRequest(BaseModel):
-    username: Optional[str] = Field(None, min_length=1)
+    username: Optional[str] = Field(None, min_length=1, max_length=50)
     email: Optional[EmailStr] = None
-    currentPassword: str = Field(min_length=1)
-    newPassword: Optional[str] = Field(None, min_length=8)
+    currentPassword: str = Field(min_length=8, max_length=72)
+    newPassword: Optional[str] = Field(None, min_length=8, max_length=72)
 
-    @field_validator("newPassword")
+    @field_validator("username", "currentPassword", "newPassword", mode="before")
     @classmethod
-    def new_password_length_check(cls, v):
+    def strip_whitespace(cls, v: Optional[str]) -> Optional[str]:
+        if isinstance(v, str):
+            return v.strip()
+        return v
+
+    @field_validator("username")
+    @classmethod
+    def validate_username_characters(cls, v: Optional[str]) -> Optional[str]:
+        """
+        Username может содержать только:
+        - латинские буквы (a-z, A-Z)
+        - цифры (0-9)
+        - дефис (-)
+        - подчеркивание (_)
+        """
+        if v is None:
+            raise ValueError("Username не может быть пустым")
+        if not re.match(r'^[a-zA-Z0-9_-]+$', v):
+            raise ValueError(
+                "Username может содержать только латинские буквы, цифры, дефис (-) и подчеркивание (_)"
+            )
+
+        if v.startswith('-') or v.endswith('-'):
+            raise ValueError("Username не может начинаться или заканчиваться дефисом")
+
+        if v.startswith('_') or v.endswith('_'):
+            raise ValueError("Username не может начинаться или заканчиваться подчеркиванием")
+
+        if '--' in v or '__' in v or '-_' in v or '_-' in v:
+            raise ValueError("Username не может содержать последовательные специальные символы")
+        return v
+
+    @field_validator("email", mode="after")
+    @classmethod
+    def validate_email_additional(cls, v: EmailStr) -> EmailStr:
+
+        email_str = str(v)
+        local_part = email_str.split('@')[0]
+        if local_part.startswith('.') or local_part.endswith('.'):
+            raise ValueError("Email не может начинаться или заканчиваться точкой в локальной части")
+
+        if '..' in local_part:
+            raise ValueError("Email не может содержать последовательные точки")
+
+        if len(local_part) > 64:
+            raise ValueError("Локальная часть email не может превышать 64 символа")
+
+        domain = email_str.split('@')[1]
+        if len(domain) > 255:
+            raise ValueError("Доменная часть email не может превышать 63 символа")
+
         return v
 
 

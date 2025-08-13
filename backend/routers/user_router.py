@@ -1,18 +1,24 @@
 from fastapi import APIRouter, status, HTTPException, Depends, UploadFile, File
-from backend.services.user_service import UserService 
-from backend.core.dependencies import get_current_user 
+from backend.services.user_service import UserService
+from backend.core.dependencies import get_current_user
 
-from backend.schemas.user import CreateUserRequest, LoginUserRequest, UserResponseBase, UpdateUserRequest  
+from backend.schemas.user import (
+    CreateUserRequest,
+    LoginUserRequest,
+    UserResponseBase,
+    UpdateUserRequest,
+)
 from backend.models.user import User
 from backend.schemas.token import RefreshTokenRequest
 
 router = APIRouter(prefix="/api", tags=["User"])
 
-@router.post('/create/user', status_code=status.HTTP_201_CREATED)
+
+@router.post("/create/user", status_code=status.HTTP_201_CREATED)
 async def create_user_route(request_data: CreateUserRequest):
     """
     **Эндпоинт для создания нового пользователя.**
-    
+
     Принимает данные о пользователе и создает нового пользователя в системе.
     **Возвращает:**
     - `user`: Объект созданного пользователя.
@@ -20,7 +26,8 @@ async def create_user_route(request_data: CreateUserRequest):
     """
     return await UserService.create_user(request_data)
 
-@router.post('/login/user') 
+
+@router.post("/login/user")
 async def login_user_route(request_data: LoginUserRequest):
     """
     **Эндпоинт для входа пользователя в систему.**
@@ -31,7 +38,8 @@ async def login_user_route(request_data: LoginUserRequest):
     """
     return await UserService.login_user(request_data)
 
-@router.get('/user/data')
+
+@router.get("/user/data")
 async def get_user_data_route(current_user: User = Depends(get_current_user)):
     """
     **Эндпоинт для получения данных о текущем пользователе.**
@@ -41,10 +49,10 @@ async def get_user_data_route(current_user: User = Depends(get_current_user)):
     """
     return await UserService.get_user_data(current_user)
 
-@router.put('/update/user')
+
+@router.put("/update/user")
 async def update_user_route(
-    request_data: UpdateUserRequest,
-    current_user: User = Depends(get_current_user)
+    request_data: UpdateUserRequest, current_user: User = Depends(get_current_user)
 ):
     """
     **Эндпоинт для обновления данных пользователя.**
@@ -58,8 +66,9 @@ async def update_user_route(
     """
     return await UserService.update_user(request_data, current_user)
 
-@router.post('/logout')
-async def logout_user_route(): 
+
+@router.post("/logout")
+async def logout_user_route(current_user: User = Depends(get_current_user)):
     """
     **Эндпоинт для выхода пользователя из системы.**
     Принимает refresh-токен и удаляет его из базы данных.
@@ -67,10 +76,11 @@ async def logout_user_route():
     - `success`: True, если выход прошел успешно.
     - `message`: Сообщение об успешном выходе.
     """
-    return await UserService.logout_user()
+    return await UserService.logout_user(current_user)
 
-@router.post('/refresh-token')
-async def refresh_access_token_route(request_data: RefreshTokenRequest): 
+
+@router.post("/refresh-token")
+async def refresh_access_token_route(request_data: RefreshTokenRequest):
     """
     **Эндпоинт для обновления refresh-токена пользователя.**
     Принимает refresh-токен и возвращает новый access-токен.
@@ -78,12 +88,12 @@ async def refresh_access_token_route(request_data: RefreshTokenRequest):
     - `access_token`: Новый JWT токен для аутентификации в последующих запросах.
     - `refresh_token`: Новый токен для обновления `access_token
     """
-    return await UserService.refresh_access_token(request_data) 
+    return await UserService.refresh_access_token(request_data)
 
-@router.post('/user/avatar')
+
+@router.post("/user/avatar")
 async def upload_avatar_route(
-    avatar: UploadFile = File(...),
-    current_user: User = Depends(get_current_user)
+    avatar: UploadFile = File(...), current_user: User = Depends(get_current_user)
 ):
     """
     **Эндпоинт для загрузки аватара пользователя.**
