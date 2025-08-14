@@ -17,20 +17,28 @@ class TestMiddlewareNegative:
         assert response.json()["detail"] == "Authentication required"
 
     async def test_request_wrong_header_authorization(
-        self, route_client_name, client_func, api_client_user, registered_user_in_db
+        self,
+        route_client_name,
+        client_func,
+        api_client_user,
+        registered_user_in_db_per_class,
     ):
-        user_data, response_data = await registered_user_in_db(None)
-        accessToken = response_data.json()["accessToken"]
+        user_data, response_data = await registered_user_in_db_per_class(None)
+        accessToken = response_data.json().copy()["accessToken"]
         wrong_format_header_authorization = "token " + accessToken
         response = await client_func(api_client_user, wrong_format_header_authorization)
         assert response.status_code == 401
         assert response.json()["detail"] == "Authentication required"
 
-    async def test_expired_token(
-        self, route_client_name, client_func, api_client_user, registered_user_in_db
+    async def test_expired_access_token(
+        self,
+        route_client_name,
+        client_func,
+        api_client_user,
+        registered_user_in_db_per_class,
     ):
-        user_data, response_data = await registered_user_in_db(None)
-        valid_token = response_data.json()["accessToken"]
+        user_data, response_data = await registered_user_in_db_per_class(None)
+        valid_token = response_data.json().copy()["accessToken"]
         valid_payload = jwt.decode(
             valid_token,
             key="fake_key",
@@ -52,10 +60,14 @@ class TestMiddlewareNegative:
         assert response.json()["detail"] == "Token expired"
 
     async def test_request_after_modify_token(
-        self, route_client_name, client_func, api_client_user, registered_user_in_db
+        self,
+        route_client_name,
+        client_func,
+        api_client_user,
+        registered_user_in_db_per_class,
     ):
-        user_data, response_data = await registered_user_in_db(None)
-        accessToken = response_data.json()["accessToken"] + "XXX"
+        user_data, response_data = await registered_user_in_db_per_class(None)
+        accessToken = response_data.json().copy()["accessToken"] + "XXX"
         response = await client_func(api_client_user, accessToken)
         assert response.status_code == 401
         assert response.json()["detail"] == "Invalid token"
