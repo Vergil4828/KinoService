@@ -42,7 +42,8 @@ class UserClient:
     async def get_new_tokens(self, refresh_token):
         async with httpx.AsyncClient() as client:
             url = f"{self.base_url}/api/refresh-token"
-            return await client.post(url, json=refresh_token)
+            req = {"refreshToken": refresh_token}
+            return await client.post(url, json=req)
 
     async def upload_avatar(self, token, avatar):
         async with httpx.AsyncClient() as client:

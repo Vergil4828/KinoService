@@ -1,7 +1,7 @@
 from fastapi import APIRouter, status, HTTPException, Depends, UploadFile, File
 from backend.services.user_service import UserService
 from backend.core.dependencies import get_current_user
-
+from starlette.requests import Request
 from backend.schemas.user import (
     CreateUserRequest,
     LoginUserRequest,
@@ -68,7 +68,9 @@ async def update_user_route(
 
 
 @router.post("/logout")
-async def logout_user_route(current_user: User = Depends(get_current_user)):
+async def logout_user_route(
+    request: Request, current_user: User = Depends(get_current_user)
+):
     """
     **Эндпоинт для выхода пользователя из системы.**
     Принимает refresh-токен и удаляет его из базы данных.
@@ -76,7 +78,7 @@ async def logout_user_route(current_user: User = Depends(get_current_user)):
     - `success`: True, если выход прошел успешно.
     - `message`: Сообщение об успешном выходе.
     """
-    return await UserService.logout_user(current_user)
+    return await UserService.logout_user(request)
 
 
 @router.post("/refresh-token")

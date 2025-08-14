@@ -17,7 +17,7 @@ from backend.core.config import (
 from pymongo.errors import DuplicateKeyError
 from fastapi import HTTPException, status, Request, UploadFile, File, Depends
 from typing import Dict, Any
-from jose import JWTError, jwt
+from jose import JWTError, jwt, ExpiredSignatureError
 from pathlib import Path
 from beanie.odm.fields import PydanticObjectId
 from backend.core.config import logger
@@ -360,7 +360,7 @@ class UserService:
             )
 
     @staticmethod
-    async def logout_user() -> Dict[str, Any]:
+    async def logout_user(request: Request) -> Dict[str, Any]:
         """
         **Метод для выхода пользователя из системы.**
         **Возвращает:**
@@ -368,8 +368,25 @@ class UserService:
         - `message`: Сообщение об успешном выходе.
         """
         try:
-            logger.info("User logout initiated (client-side token removal assumed).")
+            auth_header = request.headers.get("Authorization")
+            if not auth_header:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Authorization header is missing",
+                )
+            try:
+                scheme, token = auth_header.split()
+                if scheme.lower() != "bearer":
+                    raise ValueError
+            except (ValueError, IndexError):
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid authorization header scheme",
+                )
+            logger.info(f"User logout initiated for token ending with: {token[-5:]}")
             return {"success": True, "message": "Logout successful"}
+        except HTTPException:
+            raise
         except Exception as e:
             logger.error(f"Logout confirmation error: {e}", exc_info=True)
             raise HTTPException(
@@ -397,12 +414,11 @@ class UserService:
                 )
                 user_id = payload.get("userId")
 
-                if payload.get("exp", 0) < datetime.now(timezone.utc).timestamp():
-                    raise HTTPException(
-                        status_code=status.HTTP_401_UNAUTHORIZED,
-                        detail="Refresh token expired",
-                    )
-
+            except ExpiredSignatureError:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Token expired",
+                )
             except JWTError:
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
