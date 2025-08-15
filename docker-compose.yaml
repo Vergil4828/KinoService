@@ -1,0 +1,50 @@
+version: "3.8"
+
+services:
+  app:
+    build: .
+    ports:
+      - "${PORT}:${PORT}"
+    environment:
+      - MONGO_URI=mongodb://db:27017/8_films
+      - MONGO_DB_NAME=8_films
+      - JWT_SECRET=${JWT_SECRET}
+      - REFRESH_SECRET=${REFRESH_SECRET}
+      - CLIENT_URL=${CLIENT_URL}
+      - STATIC_FILES_DIR=${STATIC_FILES_DIR}
+    volumes:
+      - .:/app
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - app-network
+  db:
+    image: mongo:latest
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongo-data:/data/db
+    command: mongod --replSet rs0
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "quit(db.runCommand({ ping: 1 }).ok ? 0 : 2)"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+  mongo-init:
+    image: mongo
+    volumes:
+      - ./mongo-init.sh:/mongo-init.sh
+    depends_on:
+      - db
+    command: ["sh", "/mongo-init.sh"]
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+volumes:
+  mongo-data:

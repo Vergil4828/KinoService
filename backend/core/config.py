@@ -3,12 +3,13 @@ import logging
 from dotenv import load_dotenv
 from pathlib import Path
 from datetime import timedelta
+from urllib.parse import urlparse
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-script_dir = Path(__file__).parent 
-backend_root = script_dir.parent    
+script_dir = Path(__file__).parent
+backend_root = script_dir.parent
 top_level_root = backend_root.parent
 
 dotenv_path = top_level_root / ".env"
@@ -28,26 +29,35 @@ if not AVATAR_UPLOAD_DIR.exists():
 
 PORT = int(os.getenv("PORT", 8000))
 if not os.getenv("PORT"):
-    logger.warning("Переменная окружения PORT не установлена, используется по умолчанию 8000.")
+    logger.warning(
+        "Переменная окружения PORT не установлена, используется по умолчанию 8000."
+    )
 
 ALLOWED_ORIGINS = [
-    'https://vosmerka228.ru',
-    'https://api.vosmerka228.ru',
-    'http://localhost:5173',
-    'https://m.vosmerka228.ru',
+    "https://vosmerka228.ru",
+    "https://api.vosmerka228.ru",
+    "http://localhost:5173",
+    "https://m.vosmerka228.ru",
     os.getenv("FRONTEND_URL", "http://localhost:5173"),
 ]
 
+DATABASE_URL = os.getenv("DATABASE_URL")
+if DATABASE_URL:
+    parsed_url = urlparse(DATABASE_URL)
+    MONGO_URI = DATABASE_URL
+    MONGO_DB_NAME = parsed_url.path.strip("/") or os.getenv("MONGO_DB_NAME")
+else:
+    MONGO_URI = os.getenv("MONGO_URI")
+    MONGO_DB_NAME = os.getenv("MONGO_DB_NAME")
 
-MONGO_URI = os.getenv("MONGO_URI")
-MONGO_DB_NAME = os.getenv("MONGO_DB_NAME")
 
 if not MONGO_URI:
     logger.error("Переменная окружения MONGO_URI не установлена!")
     exit(1)
 if not MONGO_DB_NAME:
-    logger.warning("Переменная окружения MONGO_DB_NAME не установлена. База данных будет выбрана из URI.")
-
+    logger.warning(
+        "Переменная окружения MONGO_DB_NAME не установлена. База данных будет выбрана из URI."
+    )
 
 
 JWT_SECRET_KEY = os.getenv("JWT_SECRET")
