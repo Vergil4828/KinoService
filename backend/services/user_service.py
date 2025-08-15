@@ -17,7 +17,8 @@ from backend.core.config import (
 from pymongo.errors import DuplicateKeyError
 from fastapi import HTTPException, status, Request, UploadFile, File, Depends
 from typing import Dict, Any
-from jose import JWTError, jwt, ExpiredSignatureError
+from jose import JWTError, jwt
+from jose.exceptions import ExpiredSignatureError
 from pathlib import Path
 from beanie.odm.fields import PydanticObjectId
 from backend.core.config import logger

@@ -1,4 +1,4 @@
-import pytest, asyncio, os, shutil
+import pytest, asyncio, os, shutil, uuid
 from tests.API.User.user_client import UserClient
 from tests.data.API_User.user_test_data import CreateUserData
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -22,6 +22,8 @@ def registered_user_in_db_per_class(api_client_user, request):
             )
         if not user_data:
             user_data = CreateUserData.base_user_data.copy()
+            user_data["email"] = f"user_{uuid.uuid4()}@example.com"
+            user_data["username"] = f"user_{uuid.uuid4()}"
 
         response = await api_client_user.register_user(user_data)
         assert response.status_code == 201
@@ -31,16 +33,14 @@ def registered_user_in_db_per_class(api_client_user, request):
 
     yield create_user
     if registered_user_data:
-        client = AsyncIOMotorClient("mongodb://localhost:27018/?directConnection=true")
-        db = client["8_films"]
+        from pymongo import MongoClient
 
-        async def run_cleanup():
-            await db.users.delete_one(
-                {"email": registered_user_data["user_data"]["email"]}
-            )
-
-        asyncio.run(run_cleanup())
-        client.close()
+        client = MongoClient("mongodb://localhost:27018/?directConnection=true")
+        try:
+            db = client["8_films"]
+            db.users.delete_one({"email": registered_user_data["user_data"]["email"]})
+        finally:
+            client.close()
 
         test_class_name = request.cls.__name__
         if "TestUploadAvatarPositive" in test_class_name:
@@ -67,6 +67,8 @@ def registered_user_in_db_per_function(api_client_user, request):
             )
         if not user_data:
             user_data = CreateUserData.base_user_data.copy()
+            user_data["email"] = f"user_{uuid.uuid4()}@example.com"
+            user_data["username"] = f"user_{uuid.uuid4()}"
 
         response = await api_client_user.register_user(user_data)
         assert response.status_code == 201
@@ -76,16 +78,14 @@ def registered_user_in_db_per_function(api_client_user, request):
 
     yield create_user
     if registered_user_data:
-        client = AsyncIOMotorClient("mongodb://localhost:27018/?directConnection=true")
-        db = client["8_films"]
+        from pymongo import MongoClient
 
-        async def run_cleanup():
-            await db.users.delete_one(
-                {"email": registered_user_data["user_data"]["email"]}
-            )
-
-        asyncio.run(run_cleanup())
-        client.close()
+        client = MongoClient("mongodb://localhost:27018/?directConnection=true")
+        try:
+            db = client["8_films"]
+            db.users.delete_one({"email": registered_user_data["user_data"]["email"]})
+        finally:
+            client.close()
 
         test_class_name = request.cls.__name__
         if "TestUploadAvatarPositive" in test_class_name:
@@ -122,12 +122,15 @@ def clean_all_users():
 
 @pytest.fixture(scope="function")
 def clean_user_now():
+    from pymongo import MongoClient
 
     async def delete_user(email):
-        client = AsyncIOMotorClient("mongodb://localhost:27018/?directConnection=true")
-        db = client["8_films"]
-        await db.users.delete_one({"email": email})
-        client.close()
+        client = MongoClient("mongodb://localhost:27018/?directConnection=true")
+        try:
+            db = client["8_films"]
+            db.users.delete_one({"email": email})
+        finally:
+            client.close()
 
     return delete_user
 
@@ -154,6 +157,7 @@ def prepare_db_without_basic_plan():
             basic_plan.pop("_id", None)
             await db.subscriptionplans.insert_one(basic_plan)
         client.close()
+        await asyncio.sleep(1)
 
     asyncio.run(setup())
     yield

@@ -31,16 +31,14 @@ def registered_user_in_db_per_class(api_client_user):
 
     yield create_user
     if registered_user_data:
-        client = AsyncIOMotorClient("mongodb://localhost:27018/?directConnection=true")
-        db = client["8_films"]
+        from pymongo import MongoClient
 
-        async def run_cleanup():
-            await db.users.delete_one(
-                {"email": registered_user_data["user_data"]["email"]}
-            )
-
-        asyncio.run(run_cleanup())
-        client.close()
+        client = MongoClient("mongodb://localhost:27018/?directConnection=true")
+        try:
+            db = client["8_films"]
+            db.users.delete_one({"email": registered_user_data["user_data"]["email"]})
+        finally:
+            client.close()
 
 
 @pytest.fixture(scope="function")
@@ -65,16 +63,14 @@ def registered_user_in_db_per_function(api_client_user):
 
     yield create_user
     if registered_user_data:
-        client = AsyncIOMotorClient("mongodb://localhost:27018/?directConnection=true")
-        db = client["8_films"]
+        from pymongo import MongoClient
 
-        async def run_cleanup():
-            await db.users.delete_one(
-                {"email": registered_user_data["user_data"]["email"]}
-            )
-
-        asyncio.run(run_cleanup())
-        client.close()
+        client = MongoClient("mongodb://localhost:27018/?directConnection=true")
+        try:
+            db = client["8_films"]
+            db.users.delete_one({"email": registered_user_data["user_data"]["email"]})
+        finally:
+            client.close()
 
 
 @pytest.fixture(scope="function")
@@ -100,12 +96,15 @@ def clean_all_users():
 
 @pytest.fixture(scope="function")
 def clean_user_now():
+    from pymongo import MongoClient
 
     async def delete_user(email):
-        client = AsyncIOMotorClient("mongodb://localhost:27018/?directConnection=true")
-        db = client["8_films"]
-        await db.users.delete_one({"email": email})
-        client.close()
+        client = MongoClient("mongodb://localhost:27018/?directConnection=true")
+        try:
+            db = client["8_films"]
+            db.users.delete_one({"email": email})
+        finally:
+            client.close()
 
     return delete_user
 

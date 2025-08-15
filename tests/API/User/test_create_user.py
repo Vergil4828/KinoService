@@ -1,4 +1,4 @@
-import pytest
+import pytest, uuid, copy
 from tests.data.API_User.user_test_data import CreateUserData
 
 
@@ -54,6 +54,7 @@ class TestCreateUserValidValidation:
         self, api_client_user, username, status_code, ids, clean_user_now
     ):
         user_data = CreateUserData.base_user_data.copy()
+        user_data["email"] = f"user-{uuid.uuid4()}@example.com"
         user_data["username"] = username
         response = await api_client_user.register_user(user_data)
         assert response.status_code == status_code
@@ -82,6 +83,7 @@ class TestCreateUserValidValidation:
         self, api_client_user, password, status_code, ids, clean_user_now
     ):
         user_data = CreateUserData.base_user_data.copy()
+        user_data["email"] = f"user-{uuid.uuid4()}@example.com"
         user_data["password"] = password
         user_data["confirmPassword"] = password
 
@@ -103,6 +105,7 @@ class TestCreateUserInvalidValidation:
         self, api_client_user, username, status_code, ids
     ):
         user_data = CreateUserData.base_user_data.copy()
+        user_data["email"] = f"user-{uuid.uuid4()}@example.com"
         user_data["username"] = username
         response = await api_client_user.register_user(user_data)
         assert response.status_code == status_code
@@ -135,6 +138,7 @@ class TestCreateUserInvalidValidation:
         clean_all_users,
     ):
         user_data = CreateUserData.base_user_data.copy()
+        user_data["email"] = f"user-{uuid.uuid4()}@example.com"
         user_data["password"] = password
         user_data["confirmPassword"] = confirmPassword
 
@@ -147,8 +151,9 @@ class TestCreateUserInvalidValidation:
     )
     async def test_create_user_invalid_notifications_fields(
         self, api_client_user, field_notifications, value, status_code, ids
-    ):
-        user_data = CreateUserData.base_user_data.copy()
+    ):  # Используем глубокое копирование, так как изменяются вложенные данные
+        user_data = copy.deepcopy(CreateUserData.base_user_data)
+        user_data["email"] = f"user-{uuid.uuid4()}@example.com"
         user_data["notifications"][field_notifications] = value
         response = await api_client_user.register_user(user_data)
         assert response.status_code == status_code
@@ -164,6 +169,7 @@ class TestCreateUserNegative:
         prepare_db_without_basic_plan,
     ):
         user_data = CreateUserData.base_user_data.copy()
+        user_data["email"] = f"user-{uuid.uuid4()}@example.com"
         response = await api_client_user.register_user(user_data)
         assert response.status_code == 500
         assert response.json()["detail"] == "Ошибка сервера при создании пользователя"
@@ -173,7 +179,6 @@ class TestCreateUserNegative:
     ):
 
         user_data, _ = await registered_user_in_db_per_function(None)
-
         response_register = await api_client_user.register_user(user_data)
         assert response_register.status_code == 409
         assert response_register.json()["detail"] == "Email уже занят"
@@ -192,6 +197,7 @@ class TestCreateUserNegative:
         self, api_client_user, field_to_remove, status_code, clean_user_now
     ):
         user_data_without_field = CreateUserData.base_user_data.copy()
+        user_data_without_field["email"] = f"user-{uuid.uuid4()}@example.com"
         del user_data_without_field[field_to_remove]
         response = await api_client_user.register_user(user_data_without_field)
         assert response.status_code == status_code

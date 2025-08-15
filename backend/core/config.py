@@ -44,8 +44,8 @@ ALLOWED_ORIGINS = [
 DATABASE_URL = os.getenv("DATABASE_URL")
 if DATABASE_URL:
     parsed_url = urlparse(DATABASE_URL)
-    MONGO_URI = f"{parsed_url.scheme}://{parsed_url.netloc}"
-    MONGO_DB_NAME = parsed_url.path.strip("/")
+    MONGO_URI = DATABASE_URL
+    MONGO_DB_NAME = parsed_url.path.strip("/") or os.getenv("MONGO_DB_NAME")
 else:
     MONGO_URI = os.getenv("MONGO_URI")
     MONGO_DB_NAME = os.getenv("MONGO_DB_NAME")

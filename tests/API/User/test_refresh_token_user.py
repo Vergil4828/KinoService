@@ -1,5 +1,5 @@
 from jose import jwt
-import pytest, time
+import pytest, time, asyncio
 
 
 @pytest.mark.asyncio
@@ -8,9 +8,17 @@ class TestRefreshTokenPositive:
     async def test_get_tokens_positive(
         self, api_client_user, registered_user_in_db_per_function
     ):
-        user_data, response_data = await registered_user_in_db_per_function(None)
+        user_data, response_data = await registered_user_in_db_per_function(
+            {
+                "username": "new_tokens_user",
+                "email": "new_tokens@example.com",
+                "password": "Password123",
+                "confirmPassword": "Password123",
+            }
+        )
         accessToken = response_data.json()["accessToken"]
         refreshToken = response_data.json()["refreshToken"]
+        await asyncio.sleep(1)
         response = await api_client_user.get_new_tokens(refreshToken)
         assert response.status_code == 200
         assert response.json()["accessToken"] != accessToken

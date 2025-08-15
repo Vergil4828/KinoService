@@ -93,7 +93,7 @@ class CreateUserRequest(BaseModel):
 
         domain = email_str.split('@')[1]
         if len(domain) > 255:
-            raise ValueError("Доменная часть email не может превышать 63 символа")
+            raise ValueError("Доменная часть email не может превышать 255 символов")
 
         return v
 
@@ -161,7 +161,7 @@ class UpdateUserRequest(BaseModel):
         - подчеркивание (_)
         """
         if v is None:
-            raise ValueError("Username не может быть пустым")
+            return v
         if not re.match(r'^[a-zA-Z0-9_-]+$', v):
             raise ValueError(
                 "Username может содержать только латинские буквы, цифры, дефис (-) и подчеркивание (_)"

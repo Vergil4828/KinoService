@@ -230,7 +230,19 @@ class UpdateUserData:
         "currentPassword": "Password123",
     }
 
-    test_data_valid_username = CreateUserData.test_data_valid_username.copy()
+    test_data_valid_username = [
+        ("user123", 201, "valid_alphanumeric"),
+        ("user-name", 201, "valid_with_dash"),
+        ("user_name", 201, "valid_with_underscore"),
+        ("User_Name-123", 201, "valid_mixed_case"),
+        ("a", 201, "valid_single_char"),
+        ("test-user_123", 201, "valid_complex"),
+        ("usuario", 201, "latin_username"),
+        ("ABC123", 201, "uppercase_letters"),
+        ("test123_name-user", 201, "complex_valid_username"),
+        ("n" * 50, 201, "maximum_username_length"),
+        (None, 422, "None in the username"),
+    ]
     test_data_valid_email = CreateUserData.test_data_valid_email.copy()
     test_data_valid_new_password = [
         ("12345678", 200, "minimum_8_digits"),
@@ -247,7 +259,55 @@ class UpdateUserData:
     ]
     test_data_valid_current_password = LoginUserData.test_data_valid_password.copy()
 
-    test_data_invalid_username = CreateUserData.test_data_invalid_username.copy()
+    test_data_invalid_username = [
+        ("", 422, "Empty username"),
+        ("        ", 422, "Spaces in the username"),
+        (1234, 422, "Number in the username"),
+        (False, 422, "Bool in the username"),
+        (True, 422, "Bool in the username"),
+        ("user@name", 422, "at_symbol_in_username"),
+        ("user#name", 422, "hash_symbol_in_username"),
+        ("user$name", 422, "dollar_symbol_in_username"),
+        ("user%name", 422, "percent_symbol_in_username"),
+        ("user&name", 422, "ampersand_in_username"),
+        ("user*name", 422, "asterisk_in_username"),
+        ("user+name", 422, "plus_in_username"),
+        ("user=name", 422, "equals_in_username"),
+        ("user!name", 422, "exclamation_in_username"),
+        ("user?name", 422, "question_mark_in_username"),
+        ("user name", 422, "space_in_username"),
+        ("user.name", 422, "dot_in_username"),
+        ("user,name", 422, "comma_in_username"),
+        ("user;name", 422, "semicolon_in_username"),
+        ("user:name", 422, "colon_in_username"),
+        ("user'name", 422, "apostrophe_in_username"),
+        ('user"name', 422, "quote_in_username"),
+        ("user\\name", 422, "backslash_in_username"),
+        ("user/name", 422, "forward_slash_in_username"),
+        ("user|name", 422, "pipe_in_username"),
+        ("user<name", 422, "less_than_in_username"),
+        ("user>name", 422, "greater_than_in_username"),
+        ("user[name]", 422, "brackets_in_username"),
+        ("user{name}", 422, "braces_in_username"),
+        ("user(name)", 422, "parentheses_in_username"),
+        ("user~name", 422, "tilde_in_username"),
+        ("user`name", 422, "backtick_in_username"),
+        ("пользователь", 422, "cyrillic_username"),
+        ("用户名", 422, "chinese_username"),
+        ("ユーザー", 422, "japanese_username"),
+        ("-username", 422, "starts_with_dash"),
+        ("username-", 422, "ends_with_dash"),
+        ("_username", 422, "starts_with_underscore"),
+        ("username_", 422, "ends_with_underscore"),
+        ("user--name", 422, "double_dash"),
+        ("user__name", 422, "double_underscore"),
+        ("user-_name", 422, "dash_underscore"),
+        ("user_-name", 422, "underscore_dash"),
+        ("n" * 51, 422, "maximum_username_length"),
+        ("<script>alert('xss')</script>", 422, "xss_script_username"),
+        ("'; DROP TABLE transactions; --", 422, "sql_injection_username"),
+        ("../../../etc/passwd", 422, "path_traversal_username"),
+    ]
     test_data_invalid_email = CreateUserData.test_data_invalid_email.copy()
     test_data_invalid_new_password = [
         ("", 422, "password is empty"),

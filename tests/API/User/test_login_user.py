@@ -1,4 +1,4 @@
-import pytest
+import pytest, uuid
 from tests.data.API_User.user_test_data import LoginUserData
 
 
@@ -80,15 +80,16 @@ class TestLoginUserValidValidation:
         status_code,
         ids,
     ):
+        email = f"user-{uuid.uuid4()}@example.com"
         await registered_user_in_db_per_function(
             {
                 "username": "user_now",
-                "email": "user@example.com",
+                "email": email,
                 "password": password,
                 "confirmPassword": password,
             }
         )
-        credential = {"email": "user@example.com", "password": password}
+        credential = {"email": email, "password": password}
         response = await api_client_user.login_user(credential)
         assert response.status_code == status_code
 
@@ -119,6 +120,7 @@ class TestLoginUserInvalidValidation:
         self, api_client_user, password, status_code, ids
     ):
         credential = LoginUserData.base_credential.copy()
+        credential["email"] = f"user-{uuid.uuid4()}@example.com"
         credential["password"] = password
         response = await api_client_user.login_user(credential)
         assert response.status_code == status_code
