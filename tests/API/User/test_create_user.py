@@ -1,5 +1,5 @@
 import pytest
-from .user_test_data import CreateUserData
+from tests.data.API_User.user_test_data import CreateUserData
 
 
 @pytest.mark.asyncio
@@ -197,10 +197,6 @@ class TestCreateUserNegative:
         assert response.status_code == status_code
         if response.status_code == 201:
             await clean_user_now(user_data_without_field["email"])
-
-    # В ТЕСТ ИТ ДОБАВИТЬ, НЕДОСТАЮЩИЕ ДЛЯ НОТИФИКАЦИИ ( ПУСТЫЕ ЗНАЧЕНИЕ)
-    # добавить тест кейс, где будет неправильные значение для полей, в том числе нотификация
-    # исправить, удалить предусловия там, где они не нужны
 
     async def test_create_user_with_duplicate_field(
         self, api_client_user, clean_user_now

@@ -1,4 +1,4 @@
-from tests.API.User.user_test_data import UpdateUserData
+from tests.data.API_User.user_test_data import UpdateUserData
 
 
 class UserWalletSubscriptionData:

@@ -15,8 +15,6 @@ class TestRefreshTokenPositive:
         assert response.status_code == 200
         assert response.json()["accessToken"] != accessToken
         assert response.json()["refreshToken"] != refreshToken
-        # сравнить предыдущие и новые токены
-        # истекший токен, неверный токен, без токена и т.д.!
 
 
 @pytest.mark.asyncio

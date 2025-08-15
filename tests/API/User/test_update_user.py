@@ -1,6 +1,6 @@
 import pytest
 
-from .user_test_data import CreateUserData, UpdateUserData
+from tests.data.API_User.user_test_data import UpdateUserData
 
 
 @pytest.mark.asyncio

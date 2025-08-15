@@ -45,11 +45,10 @@ class UserClient:
             req = {"refreshToken": refresh_token}
             return await client.post(url, json=req)
 
-    async def upload_avatar(self, token, avatar):
+    async def upload_avatar(self, token, files):
         async with httpx.AsyncClient() as client:
             url = f"{self.base_url}/api/user/avatar"
             headers = {}
             if token:
                 headers = {"Authorization": f"Bearer {token}"}
-            files = {"avatar": avatar}
             return await client.post(url, headers=headers, files=files)

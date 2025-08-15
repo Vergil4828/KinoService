@@ -1,6 +1,6 @@
-import pytest, asyncio
+import pytest, asyncio, os, shutil
 from tests.API.User.user_client import UserClient
-from tests.API.User.user_test_data import CreateUserData
+from tests.data.API_User.user_test_data import CreateUserData
 from motor.motor_asyncio import AsyncIOMotorClient
 
 
@@ -10,7 +10,7 @@ def api_client_user():
 
 
 @pytest.fixture(scope="class")
-def registered_user_in_db_per_class(api_client_user):
+def registered_user_in_db_per_class(api_client_user, request):
     registered_user_data = None
 
     async def create_user(user_data):
@@ -41,10 +41,21 @@ def registered_user_in_db_per_class(api_client_user):
 
         asyncio.run(run_cleanup())
         client.close()
+
+        test_class_name = request.cls.__name__
+        if "TestUploadAvatarPositive" in test_class_name:
+            user_id = registered_user_data["response_data"].json()["user"]["id"]
+            project_root = os.path.abspath(
+                os.path.join(os.path.dirname(__file__), "..", "..", "..")
+            )
+            avatars_dir = os.path.join(project_root, "public", "uploads", "avatars")
+            avatar_path = os.path.join(avatars_dir, user_id)
+            if os.path.exists(avatar_path):
+                shutil.rmtree(avatar_path)
 
 
 @pytest.fixture(scope="function")
-def registered_user_in_db_per_function(api_client_user):
+def registered_user_in_db_per_function(api_client_user, request):
     registered_user_data = None
 
     async def create_user(user_data):
@@ -75,6 +86,17 @@ def registered_user_in_db_per_function(api_client_user):
 
         asyncio.run(run_cleanup())
         client.close()
+
+        test_class_name = request.cls.__name__
+        if "TestUploadAvatarPositive" in test_class_name:
+            user_id = registered_user_data["response_data"].json()["user"]["id"]
+            project_root = os.path.abspath(
+                os.path.join(os.path.dirname(__file__), "..", "..", "..")
+            )
+            avatars_dir = os.path.join(project_root, "public", "uploads", "avatars")
+            avatar_path = os.path.join(avatars_dir, user_id)
+            if os.path.exists(avatar_path):
+                shutil.rmtree(avatar_path)
 
 
 @pytest.fixture(scope="class")

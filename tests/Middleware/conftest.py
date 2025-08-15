@@ -1,6 +1,6 @@
 import pytest, asyncio
 from tests.API.User.user_client import UserClient
-from tests.API.User.user_test_data import CreateUserData
+from tests.data.API_User.user_test_data import CreateUserData
 from motor.motor_asyncio import AsyncIOMotorClient
 
 

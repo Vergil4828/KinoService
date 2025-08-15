@@ -468,6 +468,35 @@ class UserService:
                 status_code=status.HTTP_400_BAD_REQUEST, detail="Файл не загружен"
             )
 
+        def get_real_file_type(file_content):
+            if file_content.startswith(b"\xff\xd8\xff"):
+                return "image/jpeg"
+            elif file_content.startswith(b"\x89PNG\r\n\x1a\n"):
+                return "image/png"
+            elif file_content.startswith(b"GIF87a") or file_content.startswith(
+                b"GIF89a"
+            ):
+                return "image/gif"
+            return "invalid"
+
+        content = await avatar.read()
+        await avatar.seek(0)
+
+        file_size = len(content)
+        if file_size > 2 * 1024 * 1024:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Размер файла превышает 2MB.",
+            )
+
+        real_file_type = get_real_file_type(content)
+        allowed_types = ["image/jpeg", "image/png", "image/gif"]
+
+        if real_file_type not in allowed_types:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Разрешены только файлы изображений (JPEG, PNG, GIF).",
+            )
         allowed_image_types = ["image/jpeg", "image/png", "image/gif"]
         if avatar.content_type not in allowed_image_types:
             raise HTTPException(
@@ -476,14 +505,6 @@ class UserService:
             )
 
         try:
-            avatar.file.seek(0, os.SEEK_END)
-            file_size = avatar.file.tell()
-            await avatar.seek(0)
-            if file_size > 2 * 1024 * 1024:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Размер файла превышает 2MB.",
-                )
 
             unique_suffix = uuid.uuid4().hex
             user_upload_dir = AVATAR_UPLOAD_DIR / str(current_user.id)
@@ -494,7 +515,6 @@ class UserService:
             file_path = user_upload_dir / new_filename
 
             async with aiofiles.open(file_path, "wb") as out_file:
-                content = await avatar.read()
                 await out_file.write(content)
 
             avatar_url = f"/public/uploads/avatars/{current_user.id}/{new_filename}"

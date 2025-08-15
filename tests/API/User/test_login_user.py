@@ -1,5 +1,5 @@
 import pytest
-from .user_test_data import LoginUserData
+from tests.data.API_User.user_test_data import LoginUserData
 
 
 @pytest.mark.asyncio
