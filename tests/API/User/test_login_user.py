@@ -18,7 +18,6 @@ class TestLoginUserPositive:
         status_code,
         ids,
         registered_user_in_db_per_function,
-        clean_all_users,
     ):
         await registered_user_in_db_per_function(
             {
@@ -47,7 +46,6 @@ class TestLoginUserValidValidation:
     async def test_login_user_valid_email(
         self,
         api_client_user,
-        clean_all_users,
         registered_user_in_db_per_function,
         email,
         status_code,
@@ -74,7 +72,6 @@ class TestLoginUserValidValidation:
     async def test_login_user_valid_password(
         self,
         api_client_user,
-        clean_all_users,
         registered_user_in_db_per_function,
         password,
         status_code,
@@ -167,7 +164,7 @@ class TestLoginUserNegative:
         assert response.json()["detail"][0]["msg"] == "Field required"
 
     async def test_login_user_with_duplicate_field(
-        self, api_client_user, clean_all_users, registered_user_in_db_per_function
+        self, api_client_user, registered_user_in_db_per_function
     ):
         await registered_user_in_db_per_function(
             {
@@ -188,4 +185,3 @@ class TestLoginUserNegative:
         assert response.status_code == 200
         assert response.json()["user"]["username"] == "dupli_user"
         assert response.json()["user"]["email"] == "dupli@example.com"
-        await clean_all_users(response.json()["user"]["email"])

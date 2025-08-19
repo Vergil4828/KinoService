@@ -31,7 +31,6 @@ class TestUploadAvatarPositive:
             response = await api_client_user.upload_avatar(
                 files=files_to_upload, token=accessToken
             )
-        print(response.text)
         assert response.status_code == 200
         assert (
             response.json()["user"]["avatar"] != response_data.json()["user"]["avatar"]
@@ -63,7 +62,7 @@ class TestUploadAvatarNegative:
     ):
         user_data, response_data = await registered_user_in_db_per_function(None)
         accessToken = response_data.json()["accessToken"]
-        await clean_user_now(user_data["email"])
+        await clean_user_now(response_data.json()["user"]["id"])
         filename = f"file_positive_2_mb.jpg"
         image_path = os.path.join(TEST_UPLOAD_AVATARS_DIR, "valid_avatars", filename)
         async with aiofiles.open(image_path, "rb") as image_file:

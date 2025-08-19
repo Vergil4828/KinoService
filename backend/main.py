@@ -5,13 +5,16 @@ from backend.core.config import (
     ALLOWED_ORIGINS,
     PUBLIC_DIR,
     AVATAR_UPLOAD_DIR,
-    JWT_SECRET_KEY, 
+    JWT_SECRET_KEY,
     REFRESH_SECRET_KEY,
-    JWT_ALGORITHM 
+    JWT_ALGORITHM,
 )
 from backend.core.database import init_db
+from backend.core.redis_client import init_redis, close_redis
 from backend.core.tasks import init_scheduler
 from dotenv import load_dotenv
+from contextlib import asynccontextmanager
+from typing import AsyncContextManager, Any
 from fastapi import FastAPI
 from fastapi.middleware import Middleware
 from fastapi.middleware.cors import CORSMiddleware
@@ -26,14 +29,14 @@ from backend.models import (
     SubscriptionPlan,
     SubscriptionHistory,
     Transaction,
-    AdminAction
+    AdminAction,
 )
 from backend.models.embedded import (
     RefreshTokenEmbedded,
     CurrentSubscriptionEmbedded,
     SubscriptionHistoryEmbedded,
     WalletEmbedded,
-    NotificationsEmbedded
+    NotificationsEmbedded,
 )
 from backend.schemas import (
     SubscriptionPlanResponse,
@@ -50,7 +53,7 @@ from backend.schemas import (
     WithdrawWalletRequest,
     PurchaseSubscriptionRequest,
     AdminChangePlanRequest,
-    AdminChangeUserRequest
+    AdminChangeUserRequest,
 )
 
 from backend.routers.user_router import router as user_router
@@ -61,19 +64,38 @@ from backend.routers.admin_user_router import router as admin_user_router
 from backend.routers.admin_plan_router import router as admin_plan_router
 
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncContextManager[None]:
+    logger.info("Starting up application...")
+    try:
+        await init_db()
+        logger.info("Database initialized successfully.")
+        await init_redis()
+        logger.info("Redis client initialized successfully.")
+        await init_scheduler()
+        logger.info("Scheduler initialized successfully.")
+    except Exception as e:
+        logger.critical(f"Failed to initialize application: {e}", exc_info=True)
+        raise
+
+    yield
+
+    logger.info("Shutting down application...")
+    await close_redis()
+    logger.info("Redis client connection closed.")
+
+
+app = FastAPI(lifespan=lifespan)
 
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # ALLOWED_ORIGINS
+    allow_origins=["*"],  # ALLOWED_ORIGINS
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization", "x-access-token"],
 )
-app.json_encoders = {
-    PydanticObjectId: str
-}
+app.json_encoders = {PydanticObjectId: str}
 
 
 SubscriptionPlanResponse.model_rebuild()
@@ -87,11 +109,6 @@ AdminActionResponse.model_rebuild()
 UserResponseBase.model_rebuild()
 
 
-
-
-
-
-
 app.mount("/public", StaticFiles(directory=PUBLIC_DIR), name="static")
 
 app.include_router(user_router)
@@ -101,24 +118,6 @@ app.include_router(admin_auth_router)
 app.include_router(admin_user_router)
 app.include_router(admin_plan_router)
 
-        
-
-
-@app.on_event("startup")
-async def startup_event():
-    """Runs before the application starts."""
-    logger.info("Starting up application...")
-    
-    try:
-        await init_db()
-        logger.info("Database initialized successfully.")
-        await init_scheduler() 
-        logger.info("Scheduler initialized successfully.")
-    except Exception as e:
-        logger.critical(f"Failed to initialize application: {e}", exc_info=True)
-        
-        raise 
-
 
 @app.get("/")
 async def read_root():
@@ -127,5 +126,6 @@ async def read_root():
 
 if __name__ == "__main__":
     import uvicorn
+
     logger.info(f"Сервер запущен на порту {PORT}")
     uvicorn.run(app, host="0.0.0.0", port=int(PORT))

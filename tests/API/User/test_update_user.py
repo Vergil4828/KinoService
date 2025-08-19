@@ -8,7 +8,7 @@ from tests.data.API_User.user_test_data import UpdateUserData
 class TestUpdateUserPositive:
 
     async def test_update_user_positive(
-        self, api_client_user, registered_user_in_db_per_function, clean_all_users
+        self, api_client_user, registered_user_in_db_per_function
     ):
         update_user_data = UpdateUserData.base_user_update_data.copy()
         update_user_data["username"] = "update_user"
@@ -20,7 +20,6 @@ class TestUpdateUserPositive:
         assert response.status_code == 200
         assert response.json()["user"]["username"] == update_user_data["username"]
         assert response.json()["user"]["email"] == update_user_data["email"]
-        await clean_all_users(update_user_data["email"])
 
 
 @pytest.mark.asyncio
@@ -38,7 +37,6 @@ class TestUpdateUserValidValidation:
         username,
         status_code,
         ids,
-        clean_all_users,
     ):
         status_code = 200
         update_user_data = UpdateUserData.base_user_update_data.copy()
@@ -61,7 +59,6 @@ class TestUpdateUserValidValidation:
         email,
         status_code,
         ids,
-        clean_all_users,
     ):
         status_code = 200
         update_user_data = UpdateUserData.base_user_update_data.copy()
@@ -70,7 +67,6 @@ class TestUpdateUserValidValidation:
         update_user_data["email"] = email
         response = await api_client_user.update_user(accessToken, update_user_data)
         assert response.status_code == status_code
-        await clean_all_users(update_user_data["email"])
 
     @pytest.mark.parametrize(
         "new_password, status_code, ids",
@@ -84,7 +80,6 @@ class TestUpdateUserValidValidation:
         new_password,
         status_code,
         ids,
-        clean_all_users,
     ):
         status_code = 200
         update_user_data = UpdateUserData.base_user_update_data.copy()
@@ -107,7 +102,6 @@ class TestUpdateUserValidValidation:
         current_password,
         status_code,
         ids,
-        clean_all_users,
     ):
         status_code = 200
         update_user_data = UpdateUserData.base_user_update_data.copy()
@@ -142,7 +136,6 @@ class TestUpdateUserInvalidValidation:
         username,
         status_code,
         ids,
-        clean_all_users,
     ):
         update_user_data = UpdateUserData.base_user_update_data.copy()
         user_data, response_data = await registered_user_in_db_per_class(None)
@@ -164,7 +157,6 @@ class TestUpdateUserInvalidValidation:
         email,
         status_code,
         ids,
-        clean_all_users,
     ):
         update_user_data = UpdateUserData.base_user_update_data.copy()
         _, response_data = await registered_user_in_db_per_class(None)
@@ -185,7 +177,6 @@ class TestUpdateUserInvalidValidation:
         new_password,
         status_code,
         ids,
-        clean_all_users,
     ):
         update_user_data = UpdateUserData.base_user_update_data.copy()
         user_data, response_data = await registered_user_in_db_per_class(None)
@@ -208,7 +199,6 @@ class TestUpdateUserInvalidValidation:
         current_password,
         status_code,
         ids,
-        clean_all_users,
     ):
         update_user_data = UpdateUserData.base_user_update_data.copy()
         user_data, response_data = await registered_user_in_db_per_class(None)
@@ -230,7 +220,7 @@ class TestUpdateUserNegative:
         accessToken = response_data.json()["accessToken"]
         update_user_data = UpdateUserData.base_user_update_data.copy()
         update_user_data["email"] = user_data["email"]
-        await clean_user_now(user_data["email"])
+        await clean_user_now(response_data.json()["user"]["id"])
         response = await api_client_user.update_user(accessToken, update_user_data)
         assert response.status_code == 401
         assert response.json()["detail"] == "User not found"
@@ -242,9 +232,8 @@ class TestUpdateUserNegative:
         accessToken = response_data.json()["accessToken"]
         update_user_data = UpdateUserData.base_user_update_data.copy()
         update_user_data["currentPassword"] = "Password1234"
-        update_user_data["email"]=user_data["email"]
+        update_user_data["email"] = user_data["email"]
         response = await api_client_user.update_user(accessToken, update_user_data)
-        print(response.json())
         assert response.status_code == 400
 
     async def test_update_user_missing_required_field(
@@ -253,7 +242,7 @@ class TestUpdateUserNegative:
         user_data, response_data = await registered_user_in_db_per_function(None)
         accessToken = response_data.json()["accessToken"]
         update_user_data = UpdateUserData.base_user_update_data.copy()
-        update_user_data["email"]=user_data["email"]
+        update_user_data["email"] = user_data["email"]
         del update_user_data["currentPassword"]
         response = await api_client_user.update_user(accessToken, update_user_data)
         assert response.status_code == 422
@@ -278,4 +267,4 @@ class TestUpdateUserNegative:
         assert response.status_code == 200
         assert response.json()["user"]["username"] == "dupli_user"
         assert response.json()["user"]["email"] == "dupli_user@example.com"
-        await clean_user_now(response.json()["user"]["email"])
+        await clean_user_now(response.json()["user"]["_id"])

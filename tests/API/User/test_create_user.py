@@ -1,4 +1,4 @@
-import pytest, uuid, copy
+import pytest, uuid, copy, pytest_asyncio, asyncio
 from tests.data.API_User.user_test_data import CreateUserData
 
 
@@ -38,7 +38,7 @@ class TestCreateUserPositive:
         assert response.json()["user"]["email"] == email
         assert "accessToken" in response.json()
         assert "refreshToken" in response.json()
-        await clean_user_now(email)
+        await clean_user_now(response.json()["user"]["id"])
 
 
 @pytest.mark.asyncio
@@ -58,7 +58,7 @@ class TestCreateUserValidValidation:
         user_data["username"] = username
         response = await api_client_user.register_user(user_data)
         assert response.status_code == status_code
-        await clean_user_now(user_data["email"])
+        await clean_user_now(response.json()["user"]["id"])
 
     @pytest.mark.parametrize(
         "email, status_code, ids",
@@ -72,7 +72,7 @@ class TestCreateUserValidValidation:
         user_data["email"] = email
         response = await api_client_user.register_user(user_data)
         assert response.status_code == status_code
-        await clean_user_now(user_data["email"])
+        await clean_user_now(response.json()["user"]["id"])
 
     @pytest.mark.parametrize(
         "password, status_code, ids",
@@ -89,7 +89,7 @@ class TestCreateUserValidValidation:
 
         response = await api_client_user.register_user(user_data)
         assert response.status_code == status_code
-        await clean_user_now(user_data["email"])
+        await clean_user_now(response.json()["user"]["id"])
 
 
 @pytest.mark.asyncio
@@ -135,7 +135,6 @@ class TestCreateUserInvalidValidation:
         confirmPassword,
         status_code,
         ids,
-        clean_all_users,
     ):
         user_data = CreateUserData.base_user_data.copy()
         user_data["email"] = f"user-{uuid.uuid4()}@example.com"
@@ -175,7 +174,7 @@ class TestCreateUserNegative:
         assert response.json()["detail"] == "Ошибка сервера при создании пользователя"
 
     async def test_create_user_with_exist_email_in_database(
-        self, api_client_user, registered_user_in_db_per_function, clean_all_users
+        self, api_client_user, registered_user_in_db_per_function
     ):
 
         user_data, _ = await registered_user_in_db_per_function(None)
@@ -202,7 +201,7 @@ class TestCreateUserNegative:
         response = await api_client_user.register_user(user_data_without_field)
         assert response.status_code == status_code
         if response.status_code == 201:
-            await clean_user_now(user_data_without_field["email"])
+            await clean_user_now(response.json()["user"]["id"])
 
     async def test_create_user_with_duplicate_field(
         self, api_client_user, clean_user_now
@@ -222,4 +221,4 @@ class TestCreateUserNegative:
         assert response.status_code == 201
         assert response.json()["user"]["username"] == "dupli_user"
         assert response.json()["user"]["email"] == "dupli@example.com"
-        await clean_user_now(response.json()["user"]["email"])
+        await clean_user_now(response.json()["user"]["id"])

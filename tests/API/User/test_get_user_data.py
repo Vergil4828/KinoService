@@ -25,6 +25,6 @@ class TestGetUserDataNegative:
     ):
         user_data, response_data = await registered_user_in_db_per_function(None)
         accessToken = response_data.json()["accessToken"]
-        await clean_user_now(user_data["email"])
+        await clean_user_now(response_data.json()["user"]["id"])
         response = await api_client_user.get_user_data(accessToken)
         assert response.status_code == 401

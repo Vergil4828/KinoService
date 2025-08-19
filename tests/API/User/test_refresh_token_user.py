@@ -34,7 +34,7 @@ class TestRefreshTokenNegative:
     ):
         user_data, response_data = await registered_user_in_db_per_function(None)
         refreshToken = response_data.json()["refreshToken"]
-        await clean_user_now(user_data["email"])
+        await clean_user_now(response_data.json()["user"]["id"])
         response = await api_client_user.get_new_tokens(refreshToken)
         assert response.status_code == 401
         assert response.json()["detail"] == "User not found"

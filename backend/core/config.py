@@ -28,6 +28,7 @@ if not AVATAR_UPLOAD_DIR.exists():
 
 
 PORT = int(os.getenv("PORT", 8000))
+REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
 if not os.getenv("PORT"):
     logger.warning(
         "Переменная окружения PORT не установлена, используется по умолчанию 8000."

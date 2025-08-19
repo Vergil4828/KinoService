@@ -12,11 +12,14 @@ services:
       - REFRESH_SECRET=${REFRESH_SECRET}
       - CLIENT_URL=${CLIENT_URL}
       - STATIC_FILES_DIR=${STATIC_FILES_DIR}
+      - REDIS_URL=redis://redis:6379
     volumes:
       - .:/app
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_started
     networks:
       - app-network
   db:
@@ -33,6 +36,14 @@ services:
       retries: 5
     networks:
       - app-network
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - app-network
+    volumes:
+      - redis-data:/data
   mongo-init:
     image: mongo
     volumes:
@@ -48,3 +59,4 @@ networks:
     driver: bridge
 volumes:
   mongo-data:
+  redis-data:

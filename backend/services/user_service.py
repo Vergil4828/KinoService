@@ -23,6 +23,7 @@ from pathlib import Path
 from beanie.odm.fields import PydanticObjectId
 from backend.core.config import logger
 from backend.core.dependencies import generate_tokens, get_current_user
+from backend.core.redis_client import get_redis_client
 from backend.models.user import User
 from backend.models.subscription import SubscriptionPlan, SubscriptionHistory
 from backend.models.transaction import Transaction
@@ -95,7 +96,7 @@ class UserService:
             )
 
             await user.insert()
-            tokens = generate_tokens(user)
+            tokens = await generate_tokens(user)
 
             response_data = {
                 "message": "Пользователь создан",
@@ -165,7 +166,7 @@ class UserService:
                     detail="Invalid email or password",
                 )
 
-            tokens = generate_tokens(user)
+            tokens = await generate_tokens(user)
 
             user_data = user.model_dump(by_alias=True)
             user_data["_id"] = str(user_data["_id"])
@@ -361,7 +362,9 @@ class UserService:
             )
 
     @staticmethod
-    async def logout_user(request: Request) -> Dict[str, Any]:
+    async def logout_user(
+        request: Request, current_user: User = Depends(get_current_user)
+    ) -> Dict[str, Any]:
         """
         **Метод для выхода пользователя из системы.**
         **Возвращает:**
@@ -369,23 +372,12 @@ class UserService:
         - `message`: Сообщение об успешном выходе.
         """
         try:
-            auth_header = request.headers.get("Authorization")
-            if not auth_header:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Authorization header is missing",
-                )
-            try:
-                scheme, token = auth_header.split()
-                if scheme.lower() != "bearer":
-                    raise ValueError
-            except (ValueError, IndexError):
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Invalid authorization header scheme",
-                )
-            logger.info(f"User logout initiated for token ending with: {token[-5:]}")
+            redis_client = get_redis_client()
+            await redis_client.delete(f"refresh_token:{current_user.id}")
+            logger.info(f"Refresh token for user {current_user.id} has been revoked.")
+
             return {"success": True, "message": "Logout successful"}
+
         except HTTPException:
             raise
         except Exception as e:
@@ -414,6 +406,11 @@ class UserService:
                     refresh_token, REFRESH_SECRET_KEY, algorithms=[JWT_ALGORITHM]
                 )
                 user_id = payload.get("userId")
+                if not user_id:
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail="Invalid token format",
+                    )
 
             except ExpiredSignatureError:
                 raise HTTPException(
@@ -426,13 +423,21 @@ class UserService:
                     detail="Invalid refresh token",
                 )
 
+            redis_client = get_redis_client()
+            stored_token = await redis_client.get(f"refresh_token:{user_id}")
+            if not stored_token or stored_token.decode("utf-8") != refresh_token:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="User not found",
+                )
+
             user = await User.get(PydanticObjectId(user_id))
             if not user:
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
                 )
 
-            tokens = generate_tokens(user)
+            tokens = await generate_tokens(user)
 
             return {
                 "success": True,
