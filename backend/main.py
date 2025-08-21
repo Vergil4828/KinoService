@@ -9,8 +9,13 @@ from backend.core.config import (
     REFRESH_SECRET_KEY,
     JWT_ALGORITHM,
 )
-from backend.core.database import init_db
-from backend.core.redis_client import init_redis, close_redis
+from backend.core.database import init_db, get_motor_client
+from backend.core.redis_client import (
+    init_redis,
+    close_redis,
+    get_redis_client,
+    load_subscription_plans,
+)
 from backend.core.tasks import init_scheduler
 from dotenv import load_dotenv
 from contextlib import asynccontextmanager
@@ -72,6 +77,8 @@ async def lifespan(app: FastAPI) -> AsyncContextManager[None]:
         logger.info("Database initialized successfully.")
         await init_redis()
         logger.info("Redis client initialized successfully.")
+        await load_subscription_plans(get_redis_client())
+        logger.info("Subscription plans loaded into Redis.")
         await init_scheduler()
         logger.info("Scheduler initialized successfully.")
     except Exception as e:

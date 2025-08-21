@@ -1,5 +1,8 @@
 from jose import jwt
+
 import pytest, time
+
+from tests.API.User.conftest import clean_cache_redis
 
 
 @pytest.mark.asyncio
@@ -12,9 +15,11 @@ class TestGetUserDataPositive:
         user_data, response_data = await registered_user_in_db_per_function(None)
         accessToken = response_data.json()["accessToken"]
         response = await api_client_user.get_user_data(accessToken)
+
         assert response.status_code == 200
         assert response.json()["user"]["username"] == user_data["username"]
         assert response.json()["user"]["email"] == user_data["email"]
+        await clean_cache_redis(f"user_data:{response_data.json()['user']['id']}")
 
 
 @pytest.mark.asyncio

@@ -13,6 +13,7 @@ services:
       - CLIENT_URL=${CLIENT_URL}
       - STATIC_FILES_DIR=${STATIC_FILES_DIR}
       - REDIS_URL=redis://redis:6379
+      - BCRYPT_ROUNDS=4 # Для ускорения выполнения api при использовании хэшированния bcrypt
     volumes:
       - .:/app
     depends_on:

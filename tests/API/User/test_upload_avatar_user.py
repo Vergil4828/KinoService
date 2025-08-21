@@ -1,5 +1,5 @@
 import pytest, os, aiofiles, mimetypes
-
+from backend.core.redis_client import get_redis_client, init_redis, close_redis
 from tests.API.User.conftest import registered_user_in_db_per_function
 
 TEST_UPLOAD_AVATARS_DIR = os.path.join(
@@ -51,6 +51,36 @@ class TestUploadAvatarPositive:
                 files=files_to_upload, token=accessToken
             )
         assert response.status_code == 200
+
+    async def test_cache_user_data_delete_after_upload_avatar(
+        self, api_client_user, registered_user_in_db_per_class
+    ):
+        user_data, response_data = await registered_user_in_db_per_class(None)
+        accessToken = response_data.json()["accessToken"]
+
+        await api_client_user.get_user_data(accessToken)
+        user_id = response_data.json()["user"]["id"]
+        await init_redis()
+        redis_client = get_redis_client()
+        if redis_client:
+            user_data_before_upload = await redis_client.exists(f"user_data:{user_id}")
+            assert user_data_before_upload == 1
+
+        filename = f"file_positive_2_mb.jpg"
+        image_path = os.path.join(TEST_UPLOAD_AVATARS_DIR, "valid_avatars", filename)
+        async with aiofiles.open(image_path, "rb") as image_file:
+            image_content = await image_file.read()
+            content_type, _ = mimetypes.guess_type(filename)
+            files_to_upload = {"avatar": (filename, image_content, content_type)}
+            response = await api_client_user.upload_avatar(
+                files=files_to_upload, token=accessToken
+            )
+        if redis_client:
+            user_data_after_upload = await redis_client.exists(f"user_data:{user_id}")
+            assert user_data_after_upload == 0
+        assert user_data_before_upload != user_data_after_upload
+        assert response.status_code == 200
+        await close_redis()
 
 
 @pytest.mark.asyncio

@@ -7,11 +7,11 @@ from bson import ObjectId
 import pytest_asyncio
 
 
-async def clean_user_token(user_id):
+async def clean_cache_redis(delete_cache):
     await init_redis()
     redis_client = get_redis_client()
     if redis_client:
-        await redis_client.delete(f"refresh_token:{user_id}")
+        await redis_client.delete(delete_cache)
     await close_redis()
 
 
@@ -47,7 +47,7 @@ async def registered_user_in_db_per_class(api_client_user, request):
     if registered_user_data:
         client = AsyncIOMotorClient("mongodb://localhost:27018/?directConnection=true")
         user_id = registered_user_data["response_data"].json()["user"]["id"]
-        await clean_user_token(user_id)
+        await clean_cache_redis(f"refresh_token:{user_id}")
 
         try:
             db = client["8_films"]
@@ -94,7 +94,8 @@ async def registered_user_in_db_per_function(api_client_user, request):
     if registered_user_data:
         client = AsyncIOMotorClient("mongodb://localhost:27018/?directConnection=true")
         user_id = registered_user_data["response_data"].json()["user"]["id"]
-        await clean_user_token(user_id)
+
+        await clean_cache_redis(f"refresh_token:{user_id}")
 
         try:
             db = client["8_films"]
@@ -119,7 +120,7 @@ async def registered_user_in_db_per_function(api_client_user, request):
 async def clean_user_now():
     async def delete_user(user_id):
 
-        await clean_user_token(user_id)
+        await clean_cache_redis(f"refresh_token:{user_id}")
         client = AsyncIOMotorClient("mongodb://localhost:27018/?directConnection=true")
         db = client["8_films"]
         try:
@@ -133,8 +134,9 @@ async def clean_user_now():
 
 
 @pytest_asyncio.fixture(scope="function")
-async def prepare_db_without_basic_plan():
+async def prepare_db_and_redis_without_basic_plan():
     basic_plan = None
+    basic_plan_redis = None
     client = AsyncIOMotorClient("mongodb://localhost:27018/?directConnection=true")
     db = client["8_films"]
 
@@ -142,11 +144,19 @@ async def prepare_db_without_basic_plan():
     if basic_plan:
         await db.subscriptionplans.delete_one({"price": 0})
 
+    await init_redis()
+    redis_client = get_redis_client()
+    if redis_client:
+        basic_plan_redis = await redis_client.get("plan:Базовый")
+        await redis_client.delete(f"plan:Базовый")
+
     yield
 
     if basic_plan:
         basic_plan.pop("_id", None)
         await db.subscriptionplans.insert_one(basic_plan)
-
+    if basic_plan_redis:
+        await redis_client.set("plan:Базовый", basic_plan_redis)
     client.close()
+    await close_redis()
     await asyncio.sleep(1)

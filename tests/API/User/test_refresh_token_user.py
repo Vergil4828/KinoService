@@ -1,4 +1,5 @@
 from jose import jwt
+from backend.core.redis_client import get_redis_client, init_redis, close_redis
 import pytest, time, asyncio
 
 
@@ -29,6 +30,21 @@ class TestRefreshTokenPositive:
 @pytest.mark.negative
 class TestRefreshTokenNegative:
 
+    async def test_get_tokens_after_user_token_delete_in_redis(
+        self, api_client_user, registered_user_in_db_per_function
+    ):
+        user_data, response_data = await registered_user_in_db_per_function(None)
+        refreshToken = response_data.json()["refreshToken"]
+        user_id = response_data.json()["user"]["id"]
+        await init_redis()
+        redis_client = get_redis_client()
+        if redis_client:
+            await redis_client.delete(f"refresh_token:{user_id}")
+        await close_redis()
+        response = await api_client_user.get_new_tokens(refreshToken)
+        assert response.status_code == 401
+        assert response.json()["detail"] == "User token not in the Redis"
+
     async def test_get_tokens_after_user_delete_in_db(
         self, api_client_user, registered_user_in_db_per_function, clean_user_now
     ):
@@ -37,7 +53,7 @@ class TestRefreshTokenNegative:
         await clean_user_now(response_data.json()["user"]["id"])
         response = await api_client_user.get_new_tokens(refreshToken)
         assert response.status_code == 401
-        assert response.json()["detail"] == "User not found"
+        assert response.json()["detail"] == "User token not in the Redis"
 
     async def test_get_tokens_with_expired_refresh_token(
         self, api_client_user, registered_user_in_db_per_class

@@ -1,5 +1,5 @@
 import pytest, uuid
-
+from backend.core.redis_client import get_redis_client, init_redis, close_redis
 from tests.data.API_User.user_test_data import UpdateUserData
 
 
@@ -20,6 +20,33 @@ class TestUpdateUserPositive:
         assert response.status_code == 200
         assert response.json()["user"]["username"] == update_user_data["username"]
         assert response.json()["user"]["email"] == update_user_data["email"]
+
+    async def test_update_user_delete_cache_user_data_after_update(
+        self, api_client_user, registered_user_in_db_per_function
+    ):
+        update_user_data = UpdateUserData.base_user_update_data.copy()
+        update_user_data["username"] = "update_user"
+        update_user_data["email"] = "update_email@example.com"
+        update_user_data["newPassword"] = "Password1234"
+        _, response_data = await registered_user_in_db_per_function(None)
+        accessToken = response_data.json()["accessToken"]
+
+        await api_client_user.get_user_data(accessToken)
+        user_id = response_data.json()["user"]["id"]
+        await init_redis()
+        redis_client = get_redis_client()
+        if redis_client:
+            user_data_before_update = await redis_client.exists(f"user_data:{user_id}")
+            assert user_data_before_update == 1
+        response = await api_client_user.update_user(accessToken, update_user_data)
+        if redis_client:
+            user_data_after_update = await redis_client.exists(f"user_data:{user_id}")
+            assert user_data_after_update == 0
+        assert response.status_code == 200
+        assert response.json()["user"]["username"] == update_user_data["username"]
+        assert response.json()["user"]["email"] == update_user_data["email"]
+        assert user_data_before_update != user_data_after_update
+        await close_redis()
 
 
 @pytest.mark.asyncio

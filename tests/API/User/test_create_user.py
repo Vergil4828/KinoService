@@ -1,3 +1,6 @@
+import datetime
+import time
+
 import pytest, uuid, copy, pytest_asyncio, asyncio
 from tests.data.API_User.user_test_data import CreateUserData
 
@@ -34,6 +37,7 @@ class TestCreateUserPositive:
             },
         }
         response = await api_client_user.register_user(user_data)
+        print(response.json())
         assert response.status_code == 201
         assert response.json()["user"]["email"] == email
         assert "accessToken" in response.json()
@@ -165,7 +169,7 @@ class TestCreateUserNegative:
     async def test_create_user_without_basic_plan(
         self,
         api_client_user,
-        prepare_db_without_basic_plan,
+        prepare_db_and_redis_without_basic_plan,
     ):
         user_data = CreateUserData.base_user_data.copy()
         user_data["email"] = f"user-{uuid.uuid4()}@example.com"
