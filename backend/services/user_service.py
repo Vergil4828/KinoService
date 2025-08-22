@@ -1,3 +1,5 @@
+import asyncio
+import json
 import logging
 import os
 import shutil
@@ -21,8 +23,9 @@ from jose import JWTError, jwt
 from jose.exceptions import ExpiredSignatureError
 from pathlib import Path
 from beanie.odm.fields import PydanticObjectId
-from backend.core.config import logger
+from backend.core.config import logger, BCRYPT_ROUNDS
 from backend.core.dependencies import generate_tokens, get_current_user
+from backend.core.redis_client import get_redis_client, delete_redis_cache
 from backend.models.user import User
 from backend.models.subscription import SubscriptionPlan, SubscriptionHistory
 from backend.models.transaction import Transaction
@@ -50,29 +53,42 @@ class UserService:
         - `user`: Объект созданного пользователя с его данными.
         """
         try:
-            basic_plan = await SubscriptionPlan.find_one({"price": 0})
-            if not basic_plan:
-                logger.error("Базовый тарифный план не найден при регистрации")
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="Ошибка сервера: Базовый тарифный план не найден",
+            redis_client = get_redis_client()
+            basic_plan = await redis_client.get("plan:Базовый")
+            if basic_plan:
+                plan_data_redis = json.loads(basic_plan)
+                logger.info("Базовый план взят из Redis")
+            else:
+                basic_plan_from_db = await SubscriptionPlan.find_one({"price": 0})
+                if not basic_plan_from_db:
+                    logger.error("Базовый тарифный план не найден при регистрации")
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail="Ошибка сервера: Базовый тарифный план не найден",
+                    )
+                await redis_client.set(
+                    "plan:Базовый", basic_plan_from_db.model_dump_json()
                 )
+                logger.info("Базовый план взят из MongoDB и сохранен в Redis")
 
-            hashed_password_bytes = bcrypt.hashpw(
-                request_data.password.encode("utf-8"), bcrypt.gensalt()
+                plan_data_redis = basic_plan_from_db.model_dump(by_alias=True)
+
+            hashed_password_bytes = await asyncio.to_thread(
+                bcrypt.hashpw,
+                request_data.password.encode("utf-8"),
+                bcrypt.gensalt(rounds=BCRYPT_ROUNDS),
             )
             hashed_password_str = hashed_password_bytes.decode("utf-8")
 
             now = datetime.now(timezone.utc)
-
             plan_data = {
-                "id": str(basic_plan.id),
-                "name": basic_plan.name,
-                "price": basic_plan.price,
-                "features": basic_plan.features,
-                "renewalPeriod": basic_plan.renewalPeriod,
-                "createdAt": basic_plan.createdAt,
-                "updatedAt": basic_plan.updatedAt,
+                "id": str(plan_data_redis.get("_id", plan_data_redis.get("id"))),
+                "name": plan_data_redis["name"],
+                "price": plan_data_redis["price"],
+                "features": plan_data_redis["features"],
+                "renewalPeriod": plan_data_redis["renewalPeriod"],
+                "createdAt": plan_data_redis.get("createdAt"),
+                "updatedAt": plan_data_redis.get("updatedAt"),
             }
 
             user = User(
@@ -81,7 +97,7 @@ class UserService:
                 password=hashed_password_str,
                 notifications=request_data.notifications or NotificationsEmbedded(),
                 currentSubscription=CurrentSubscriptionEmbedded(
-                    planId=basic_plan.id,
+                    planId=plan_data_redis.get("id") or str(plan_data_redis.get("_id")),
                     startDate=now,
                     endDate=None,
                     isActive=True,
@@ -95,7 +111,7 @@ class UserService:
             )
 
             await user.insert()
-            tokens = generate_tokens(user)
+            tokens = await generate_tokens(user)
 
             response_data = {
                 "message": "Пользователь создан",
@@ -165,7 +181,7 @@ class UserService:
                     detail="Invalid email or password",
                 )
 
-            tokens = generate_tokens(user)
+            tokens = await generate_tokens(user)
 
             user_data = user.model_dump(by_alias=True)
             user_data["_id"] = str(user_data["_id"])
@@ -198,6 +214,13 @@ class UserService:
         - `user`: Объект пользователя с его данными.
         """
         try:
+            redis_client = get_redis_client()
+            user_data_key = f"user_data:{current_user.id}"
+            user_in_redis = await redis_client.get(user_data_key)
+            if user_in_redis:
+                logger.info("Данные взяты из Redis")
+                return json.loads(user_in_redis)
+
             user = await User.get(current_user.id)
             if not user:
                 raise HTTPException(status_code=404, detail="User not found")
@@ -267,7 +290,7 @@ class UserService:
                 for sh in subscription_history
             ]
 
-            return {
+            response_data = {
                 "user": {
                     "id": str(user.id),
                     "username": user.username,
@@ -284,6 +307,10 @@ class UserService:
                     },
                 }
             }
+
+            await redis_client.set(user_data_key, json.dumps(response_data), ex=3600)
+
+            return response_data
 
         except Exception as e:
             logger.error(f"Error getting user data: {str(e)}")
@@ -334,6 +361,8 @@ class UserService:
 
         try:
             await current_user.save()
+            user_data_key = f"user_data:{current_user.id}"
+            await delete_redis_cache(user_data_key)
 
             user_data_dict = current_user.model_dump(by_alias=True)
             user_data_dict["_id"] = str(user_data_dict["_id"])
@@ -361,7 +390,9 @@ class UserService:
             )
 
     @staticmethod
-    async def logout_user(request: Request) -> Dict[str, Any]:
+    async def logout_user(
+        request: Request, current_user: User = Depends(get_current_user)
+    ) -> Dict[str, Any]:
         """
         **Метод для выхода пользователя из системы.**
         **Возвращает:**
@@ -369,23 +400,12 @@ class UserService:
         - `message`: Сообщение об успешном выходе.
         """
         try:
-            auth_header = request.headers.get("Authorization")
-            if not auth_header:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Authorization header is missing",
-                )
-            try:
-                scheme, token = auth_header.split()
-                if scheme.lower() != "bearer":
-                    raise ValueError
-            except (ValueError, IndexError):
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Invalid authorization header scheme",
-                )
-            logger.info(f"User logout initiated for token ending with: {token[-5:]}")
+            await delete_redis_cache(f"refresh_token:{current_user.id}")
+            await delete_redis_cache(f"user_data:{current_user.id}")
+            await delete_redis_cache(f"wallet_data:{current_user.id}")
+
             return {"success": True, "message": "Logout successful"}
+
         except HTTPException:
             raise
         except Exception as e:
@@ -414,6 +434,11 @@ class UserService:
                     refresh_token, REFRESH_SECRET_KEY, algorithms=[JWT_ALGORITHM]
                 )
                 user_id = payload.get("userId")
+                if not user_id:
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail="Invalid token format",
+                    )
 
             except ExpiredSignatureError:
                 raise HTTPException(
@@ -426,13 +451,21 @@ class UserService:
                     detail="Invalid refresh token",
                 )
 
+            redis_client = get_redis_client()
+            stored_token = await redis_client.get(f"refresh_token:{user_id}")
+            if not stored_token or stored_token != refresh_token:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="User token not in the Redis",
+                )
+
             user = await User.get(PydanticObjectId(user_id))
             if not user:
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
                 )
 
-            tokens = generate_tokens(user)
+            tokens = await generate_tokens(user)
 
             return {
                 "success": True,
@@ -544,6 +577,8 @@ class UserService:
 
             current_user.avatar = avatar_url
             await current_user.save()
+
+            await delete_redis_cache(f"user_data:{current_user.id}")
 
             user_data_dict = current_user.model_dump(by_alias=True)
             user_data_dict["_id"] = str(user_data_dict["_id"])

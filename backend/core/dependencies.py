@@ -5,15 +5,15 @@ from jose import JWTError, jwt, ExpiredSignatureError
 import bcrypt
 from fastapi import HTTPException, Depends, status, Request
 from beanie.odm.fields import PydanticObjectId
-
+from backend.core.redis_client import get_redis_client
 
 from backend.core.config import (
     logger,
     JWT_SECRET_KEY,
     REFRESH_SECRET_KEY,
     JWT_ALGORITHM,
-    ACCESS_TOKEN_EXPIRE_MINUTES, 
-    REFRESH_TOKEN_EXPIRE_DAYS 
+    ACCESS_TOKEN_EXPIRE_MINUTES,
+    REFRESH_TOKEN_EXPIRE_DAYS,
 )
 
 
@@ -21,45 +21,55 @@ from backend.models.user import User
 from backend.models.admin import AdminAction
 
 
-def generate_tokens(user: User) -> Dict[str, str]:
+async def save_refresh_token_in_redis(
+    user_id: str, refresh_token: str, expires: timedelta
+):
+    redis_client = get_redis_client()
+    await redis_client.set(f"refresh_token:{user_id}", refresh_token, ex=expires)
+
+
+async def generate_tokens(user: User) -> Dict[str, str]:
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     refresh_token_expires = timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
 
     access_payload = {
         "userId": str(user.id),
         "role": user.role,
-        "exp": datetime.now(timezone.utc) + access_token_expires
+        "exp": datetime.now(timezone.utc) + access_token_expires,
     }
 
     refresh_payload = {
         "userId": str(user.id),
         "role": user.role,
-        "exp": datetime.now(timezone.utc) + refresh_token_expires
+        "exp": datetime.now(timezone.utc) + refresh_token_expires,
     }
 
     access_token = jwt.encode(access_payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
-    refresh_token = jwt.encode(refresh_payload, REFRESH_SECRET_KEY, algorithm=JWT_ALGORITHM)
+    refresh_token = jwt.encode(
+        refresh_payload, REFRESH_SECRET_KEY, algorithm=JWT_ALGORITHM
+    )
 
-    return {
-        "accessToken": access_token,
-        "refreshToken": refresh_token
-    }
+    await save_refresh_token_in_redis(
+        str(user.id), refresh_token, refresh_token_expires
+    )
+    return {"accessToken": access_token, "refreshToken": refresh_token}
+
 
 async def get_current_user(request: Request) -> User:
     try:
-        
-        auth_header = request.headers.get('Authorization')
-        x_access_token = request.headers.get('x-access-token')
+
+        auth_header = request.headers.get("Authorization")
+        x_access_token = request.headers.get("x-access-token")
         token = None
 
         if auth_header:
             try:
                 scheme, token = auth_header.split()
-                if scheme.lower() != 'bearer':
+                if scheme.lower() != "bearer":
                     raise ValueError("Invalid scheme")
             except ValueError:
                 token = None
-        
+
         if not token and x_access_token:
             token = x_access_token
 
@@ -74,7 +84,7 @@ async def get_current_user(request: Request) -> User:
         try:
             payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
             user_id = payload.get("userId")
-            
+
             if not user_id:
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
@@ -130,7 +140,7 @@ async def log_admin_action(
     target_model: str,
     target_id: Optional[PydanticObjectId] = None,
     changes: Optional[Dict[str, Any]] = None,
-    additional_info: Optional[str] = None
+    additional_info: Optional[str] = None,
 ):
     now_utc = datetime.now(timezone.utc)
     try:
@@ -141,13 +151,11 @@ async def log_admin_action(
             targetId=target_id,
             changes=changes,
             ipAddress=request.client.host if request.client else None,
-            userAgent=request.headers.get('user-agent'),
+            userAgent=request.headers.get("user-agent"),
             additionalInfo=additional_info,
             createdAt=now_utc,
-            updatedAt=now_utc
+            updatedAt=now_utc,
         )
         await admin_action.insert()
     except Exception as err:
-        logger.error(f'Ошибка при записи действия администратора: {err}', exc_info=True)
-        
-    
+        logger.error(f"Ошибка при записи действия администратора: {err}", exc_info=True)
