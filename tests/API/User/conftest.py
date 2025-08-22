@@ -153,7 +153,6 @@ async def prepare_db_and_redis_without_basic_plan():
     yield
 
     if basic_plan:
-        basic_plan.pop("_id", None)
         await db.subscriptionplans.insert_one(basic_plan)
     if basic_plan_redis:
         await redis_client.set("plan:Базовый", basic_plan_redis)

@@ -43,3 +43,9 @@ async def load_subscription_plans(redis_client_plan):
         await redis_client_plan.set(f"plan:{plan_name}", plan.model_dump_json())
 
     await redis_client_plan.set("subscription_plans_loaded", "true")
+
+
+async def delete_redis_cache(redis_key):
+    if redis_client:
+        if await redis_client.exists(redis_key):
+            await redis_client.delete(redis_key)

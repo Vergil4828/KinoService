@@ -25,7 +25,7 @@ from pathlib import Path
 from beanie.odm.fields import PydanticObjectId
 from backend.core.config import logger, BCRYPT_ROUNDS
 from backend.core.dependencies import generate_tokens, get_current_user
-from backend.core.redis_client import get_redis_client
+from backend.core.redis_client import get_redis_client, delete_redis_cache
 from backend.models.user import User
 from backend.models.subscription import SubscriptionPlan, SubscriptionHistory
 from backend.models.transaction import Transaction
@@ -215,8 +215,8 @@ class UserService:
         """
         try:
             redis_client = get_redis_client()
-
-            user_in_redis = await redis_client.get(f"user_data:{current_user.id}")
+            user_data_key = f"user_data:{current_user.id}"
+            user_in_redis = await redis_client.get(user_data_key)
             if user_in_redis:
                 logger.info("Данные взяты из Redis")
                 return json.loads(user_in_redis)
@@ -308,9 +308,7 @@ class UserService:
                 }
             }
 
-            await redis_client.set(
-                f"user_data:{current_user.id}", json.dumps(response_data), ex=3600
-            )
+            await redis_client.set(user_data_key, json.dumps(response_data), ex=3600)
 
             return response_data
 
@@ -363,11 +361,8 @@ class UserService:
 
         try:
             await current_user.save()
-
-            redis_client = get_redis_client()
-            if redis_client:
-                if await redis_client.exists(f"user_data:{current_user.id}"):
-                    await redis_client.delete(f"user_data:{current_user.id}")
+            user_data_key = f"user_data:{current_user.id}"
+            await delete_redis_cache(user_data_key)
 
             user_data_dict = current_user.model_dump(by_alias=True)
             user_data_dict["_id"] = str(user_data_dict["_id"])
@@ -405,10 +400,9 @@ class UserService:
         - `message`: Сообщение об успешном выходе.
         """
         try:
-            redis_client = get_redis_client()
-            await redis_client.delete(f"refresh_token:{current_user.id}")
-            await redis_client.delete(f"user_data:{current_user.id}")
-            logger.info(f"Refresh token for user {current_user.id} has been revoked.")
+            await delete_redis_cache(f"refresh_token:{current_user.id}")
+            await delete_redis_cache(f"user_data:{current_user.id}")
+            await delete_redis_cache(f"wallet_data:{current_user.id}")
 
             return {"success": True, "message": "Logout successful"}
 
@@ -546,8 +540,6 @@ class UserService:
 
         try:
 
-
-
             unique_suffix = uuid.uuid4().hex
             user_upload_dir = AVATAR_UPLOAD_DIR / str(current_user.id)
             os.makedirs(user_upload_dir, exist_ok=True)
@@ -586,10 +578,7 @@ class UserService:
             current_user.avatar = avatar_url
             await current_user.save()
 
-            redis_client = get_redis_client()
-            if redis_client:
-                if await redis_client.exists(f"user_data:{current_user.id}"):
-                    await redis_client.delete(f"user_data:{current_user.id}")
+            await delete_redis_cache(f"user_data:{current_user.id}")
 
             user_data_dict = current_user.model_dump(by_alias=True)
             user_data_dict["_id"] = str(user_data_dict["_id"])
