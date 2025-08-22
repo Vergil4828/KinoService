@@ -35,11 +35,12 @@ class SubscriptionService:
         try:
             plans_key = "all_subscriptions_plans"
             redis_client = get_redis_client()
-            cached_plans = await redis_client.get(plans_key)
-            if cached_plans:
-                logger.info("Тарифные планы взяты из Redis.")
-                plans_data = json.loads(cached_plans)
-                return [SubscriptionPlanResponse(**plan) for plan in plans_data]
+            if redis_client:
+                cached_plans = await redis_client.get(plans_key)
+                if cached_plans:
+                    logger.info("Тарифные планы взяты из Redis.")
+                    plans_data = json.loads(cached_plans)
+                    return [SubscriptionPlanResponse(**plan) for plan in plans_data]
 
             plans = await SubscriptionPlan.find().sort("price").to_list()
 
@@ -48,9 +49,9 @@ class SubscriptionService:
                 plan_dict = plan.model_dump(by_alias=True, mode="json")
                 plan_dict["_id"] = str(plan_dict["_id"])
                 response.append(plan_dict)
-
-            await redis_client.set(plans_key, json.dumps(response), ex=3600)
-            logger.info("Тарифные планы взяты из MongoDB и сохранены в Redis.")
+            if redis_client:
+                await redis_client.set(plans_key, json.dumps(response), ex=3600)
+                logger.info("Тарифные планы взяты из MongoDB и сохранены в Redis.")
 
             return [SubscriptionPlanResponse(**plan) for plan in response]
 
