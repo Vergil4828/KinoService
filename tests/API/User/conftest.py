@@ -2,6 +2,17 @@ import pytest, asyncio, os, shutil, uuid
 from tests.API.User.user_client import UserClient
 from tests.data.API_User.user_test_data import CreateUserData
 from motor.motor_asyncio import AsyncIOMotorClient
+from backend.core.redis_client import get_redis_client, init_redis, close_redis
+from bson import ObjectId
+import pytest_asyncio
+
+
+async def clean_cache_redis(delete_cache):
+    await init_redis()
+    redis_client = get_redis_client()
+    if redis_client:
+        await redis_client.delete(delete_cache)
+    await close_redis()
 
 
 @pytest.fixture(scope="session")
@@ -9,8 +20,8 @@ def api_client_user():
     return UserClient()
 
 
-@pytest.fixture(scope="class")
-def registered_user_in_db_per_class(api_client_user, request):
+@pytest_asyncio.fixture(scope="class")
+async def registered_user_in_db_per_class(api_client_user, request):
     registered_user_data = None
 
     async def create_user(user_data):
@@ -32,16 +43,18 @@ def registered_user_in_db_per_class(api_client_user, request):
         return user_data, response
 
     yield create_user
-    if registered_user_data:
-        from pymongo import MongoClient
 
-        client = MongoClient("mongodb://localhost:27018/?directConnection=true")
+    if registered_user_data:
+        client = AsyncIOMotorClient("mongodb://localhost:27018/?directConnection=true")
+        user_id = registered_user_data["response_data"].json()["user"]["id"]
+        await clean_cache_redis(f"refresh_token:{user_id}")
+
         try:
             db = client["8_films"]
-            db.users.delete_one({"email": registered_user_data["user_data"]["email"]})
+            user_id_obj = ObjectId(user_id)
+            await db.users.delete_one({"_id": user_id_obj})
         finally:
             client.close()
-
         test_class_name = request.cls.__name__
         if "TestUploadAvatarPositive" in test_class_name:
             user_id = registered_user_data["response_data"].json()["user"]["id"]
@@ -54,8 +67,8 @@ def registered_user_in_db_per_class(api_client_user, request):
                 shutil.rmtree(avatar_path)
 
 
-@pytest.fixture(scope="function")
-def registered_user_in_db_per_function(api_client_user, request):
+@pytest_asyncio.fixture(scope="function")
+async def registered_user_in_db_per_function(api_client_user, request):
     registered_user_data = None
 
     async def create_user(user_data):
@@ -77,13 +90,17 @@ def registered_user_in_db_per_function(api_client_user, request):
         return user_data, response
 
     yield create_user
-    if registered_user_data:
-        from pymongo import MongoClient
 
-        client = MongoClient("mongodb://localhost:27018/?directConnection=true")
+    if registered_user_data:
+        client = AsyncIOMotorClient("mongodb://localhost:27018/?directConnection=true")
+        user_id = registered_user_data["response_data"].json()["user"]["id"]
+
+        await clean_cache_redis(f"refresh_token:{user_id}")
+
         try:
             db = client["8_films"]
-            db.users.delete_one({"email": registered_user_data["user_data"]["email"]})
+            user_id_obj = ObjectId(user_id)
+            await db.users.delete_one({"_id": user_id_obj})
         finally:
             client.close()
 
@@ -99,66 +116,46 @@ def registered_user_in_db_per_function(api_client_user, request):
                 shutil.rmtree(avatar_path)
 
 
-@pytest.fixture(scope="class")
-def clean_all_users():
-    emails_to_clean = []
+@pytest_asyncio.fixture(scope="function")
+async def clean_user_now():
+    async def delete_user(user_id):
 
-    async def cleanup_user(email):
-        emails_to_clean.append(email)
-
-    yield cleanup_user
-
-    if emails_to_clean:
+        await clean_cache_redis(f"refresh_token:{user_id}")
         client = AsyncIOMotorClient("mongodb://localhost:27018/?directConnection=true")
         db = client["8_films"]
-
-        async def run_cleanup():
-            for email in emails_to_clean:
-                await db.users.delete_one({"email": email})
-
-        asyncio.run(run_cleanup())
-        client.close()
-
-
-@pytest.fixture(scope="function")
-def clean_user_now():
-    from pymongo import MongoClient
-
-    async def delete_user(email):
-        client = MongoClient("mongodb://localhost:27018/?directConnection=true")
         try:
-            db = client["8_films"]
-            db.users.delete_one({"email": email})
+            user_id_obj = ObjectId(user_id)
+            await db.users.delete_one({"_id": user_id_obj})
+
         finally:
             client.close()
 
     return delete_user
 
 
-@pytest.fixture(scope="function")
-def prepare_db_without_basic_plan():
+@pytest_asyncio.fixture(scope="function")
+async def prepare_db_and_redis_without_basic_plan():
     basic_plan = None
+    basic_plan_redis = None
+    client = AsyncIOMotorClient("mongodb://localhost:27018/?directConnection=true")
+    db = client["8_films"]
 
-    async def setup():
-        nonlocal basic_plan
-        client = AsyncIOMotorClient("mongodb://localhost:27018/?directConnection=true")
-        db = client["8_films"]
+    basic_plan = await db.subscriptionplans.find_one({"price": 0})
+    if basic_plan:
+        await db.subscriptionplans.delete_one({"price": 0})
 
-        basic_plan = await db.subscriptionplans.find_one({"price": 0})
-        if basic_plan:
-            await db.subscriptionplans.delete_one({"price": 0})
-        client.close()
+    await init_redis()
+    redis_client = get_redis_client()
+    if redis_client:
+        basic_plan_redis = await redis_client.get("plan:Базовый")
+        await redis_client.delete(f"plan:Базовый")
 
-    async def cleanup():
-        nonlocal basic_plan
-        client = AsyncIOMotorClient("mongodb://localhost:27018/?directConnection=true")
-        db = client["8_films"]
-        if basic_plan:
-            basic_plan.pop("_id", None)
-            await db.subscriptionplans.insert_one(basic_plan)
-        client.close()
-        await asyncio.sleep(1)
-
-    asyncio.run(setup())
     yield
-    asyncio.run(cleanup())
+
+    if basic_plan:
+        await db.subscriptionplans.insert_one(basic_plan)
+    if basic_plan_redis:
+        await redis_client.set("plan:Базовый", basic_plan_redis)
+    client.close()
+    await close_redis()
+    await asyncio.sleep(1)

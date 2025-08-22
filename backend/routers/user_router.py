@@ -78,7 +78,7 @@ async def logout_user_route(
     - `success`: True, если выход прошел успешно.
     - `message`: Сообщение об успешном выходе.
     """
-    return await UserService.logout_user(request)
+    return await UserService.logout_user(request, current_user)
 
 
 @router.post("/refresh-token")
