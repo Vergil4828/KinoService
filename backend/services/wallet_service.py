@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 from pymongo.errors import OperationFailure
@@ -157,15 +158,6 @@ class WalletService:
 
                         await session.commit_transaction()
 
-                        try:
-                            await delete_redis_cache(f"wallet_data:{current_user.id}")
-                            await delete_redis_cache(f"user_data:{current_user.id}")
-                        except Exception as cache_err:
-                            logger.warning(
-                                f"Failed to delete Redis cache for user {current_user.id}: {cache_err}",
-                                exc_info=True,
-                            )
-
                         transaction_dict = inserted_transaction.model_dump(
                             by_alias=True, mode="json"
                         )
@@ -177,11 +169,6 @@ class WalletService:
                             "newBalance": updated_user.wallet.balance,
                             "transaction": transaction_dict,
                         }
-
-                        logger.info(
-                            f"DEBUG: Final payload to be returned to FastAPI: {final_response_payload}"
-                        )
-                        return final_response_payload
 
                     except OperationFailure as e:
                         labels = set(getattr(e, "error_labels", []) or [])
@@ -209,6 +196,7 @@ class WalletService:
                                 await session.abort_transaction()
                             except Exception:
                                 pass
+                            await asyncio.sleep(0.05 * (2**attempt))
                             continue
                         try:
                             await session.abort_transaction()
@@ -220,7 +208,6 @@ class WalletService:
                         raise HTTPException(
                             status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
                         )
-
                     except Exception as err:
                         if session.in_transaction:
                             await session.abort_transaction()
@@ -232,6 +219,30 @@ class WalletService:
                         raise HTTPException(
                             status_code=status.HTTP_400_BAD_REQUEST, detail=str(err)
                         )
+                    except Exception as err:
+                        if session.in_transaction:
+                            await session.abort_transaction()
+                        logger.error(
+                            f"Ошибка при пополнении кошелька: {err}", exc_info=True
+                        )
+                        if isinstance(err, HTTPException):
+                            raise err
+                        raise HTTPException(
+                            status_code=status.HTTP_400_BAD_REQUEST, detail=str(err)
+                        )
+            try:
+                await delete_redis_cache(f"wallet_data:{current_user.id}")
+                await delete_redis_cache(f"user_data:{current_user.id}")
+            except Exception as cache_err:
+                logger.warning(
+                    f"Failed to delete Redis cache for user {current_user.id}: {cache_err}",
+                    exc_info=True,
+                )
+            return {
+                "success": True,
+                "newBalance": updated_user.wallet.balance,
+                "transaction": transaction_dict,
+            }
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Не удалось выполнить транзакцию из-за постоянных конфликтов записи. Пожалуйста, попробуйте еще раз позже.",

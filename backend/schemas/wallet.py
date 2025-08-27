@@ -18,6 +18,8 @@ class DepositWalletRequest(BaseModel):
             raise ValueError('Сумма должна быть числом, не булевым значением.')
         if v is None:
             raise ValueError('Сумма обязательна для заполнения.')
+        if isinstance(v, float) and (v != v or v in (float('inf'), float('-inf'))):
+            raise ValueError('Сумма должна быть конечным числом.')
         if v < 10:
             raise ValueError('Сумма пополнения должна быть не менее 10.')
         if round(v, 2) != v:
