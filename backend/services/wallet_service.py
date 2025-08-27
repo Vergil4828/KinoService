@@ -1,5 +1,6 @@
 import json
 import logging
+from pymongo.errors import OperationFailure
 from datetime import datetime, timezone
 from typing import Dict, Any, List, Optional
 from fastapi import HTTPException, status, Depends
@@ -119,68 +120,91 @@ class WalletService:
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Ошибка сервера: База данных недоступна",
             )
+        retries = 5
+        for attempt in range(retries):
+            async with await client.start_session() as session:
+                async with session.start_transaction():
+                    try:
+                        now_utc = datetime.now(timezone.utc)
 
-        async with await client.start_session() as session:
-            async with session.start_transaction():
-                try:
-                    now_utc = datetime.now(timezone.utc)
+                        transaction_data = Transaction(
+                            userId=str(current_user.id),
+                            amount=request_data.amount,
+                            type="deposit",
+                            status="completed",
+                            paymentMethod=request_data.paymentMethod,
+                            description=f"Пополнение баланса на {request_data.amount} RUB",
+                            date=now_utc,
+                            createdAt=now_utc,
+                            updatedAt=now_utc,
+                        )
 
-                    transaction_data = Transaction(
-                        userId=str(current_user.id),
-                        amount=request_data.amount,
-                        type="deposit",
-                        status="completed",
-                        paymentMethod=request_data.paymentMethod,
-                        description=f"Пополнение баланса на {request_data.amount} RUB",
-                        date=now_utc,
-                        createdAt=now_utc,
-                        updatedAt=now_utc,
-                    )
+                        inserted_transaction = await Transaction.insert_one(
+                            transaction_data, session=session
+                        )
 
-                    inserted_transaction = await Transaction.insert_one(
-                        transaction_data, session=session
-                    )
+                        await User.find_one(User.id == current_user.id).update(
+                            {
+                                "$inc": {"wallet.balance": request_data.amount},
+                                "$push": {
+                                    "wallet.transactionIds": inserted_transaction.id
+                                },
+                            },
+                            session=session,
+                        )
 
-                    await User.find_one(User.id == current_user.id).update(
-                        {
-                            "$inc": {"wallet.balance": request_data.amount},
-                            "$push": {"wallet.transactionIds": inserted_transaction.id},
-                        },
-                        session=session,
-                    )
+                        updated_user = await User.get(current_user.id, session=session)
 
-                    updated_user = await User.get(current_user.id, session=session)
+                        await session.commit_transaction()
 
-                    await session.commit_transaction()
+                        await delete_redis_cache(f"wallet_data:{current_user.id}")
+                        await delete_redis_cache(f"user_data:{current_user.id}")
 
-                    await delete_redis_cache(f"wallet_data:{current_user.id}")
-                    await delete_redis_cache(f"user_data:{current_user.id}")
+                        transaction_dict = inserted_transaction.model_dump(
+                            by_alias=True, mode="json"
+                        )
+                        transaction_dict["_id"] = str(transaction_dict["_id"])
+                        transaction_dict["userId"] = str(transaction_dict["userId"])
 
-                    transaction_dict = inserted_transaction.model_dump(
-                        by_alias=True, mode="json"
-                    )
-                    transaction_dict["_id"] = str(transaction_dict["_id"])
-                    transaction_dict["userId"] = str(transaction_dict["userId"])
+                        final_response_payload = {
+                            "success": True,
+                            "newBalance": updated_user.wallet.balance,
+                            "transaction": transaction_dict,
+                        }
 
-                    final_response_payload = {
-                        "success": True,
-                        "newBalance": updated_user.wallet.balance,
-                        "transaction": transaction_dict,
-                    }
+                        logger.info(
+                            f"DEBUG: Final payload to be returned to FastAPI: {final_response_payload}"
+                        )
+                        return final_response_payload
 
-                    logger.info(
-                        f"DEBUG: Final payload to be returned to FastAPI: {final_response_payload}"
-                    )
-                    return final_response_payload
+                    except OperationFailure as e:
+                        if "WriteConflict" in str(e) and attempt < retries - 1:
+                            logger.warning(
+                                f"Write conflict detected. Retrying transaction... Attempt {attempt + 1}/{retries}"
+                            )
+                            await session.abort_transaction()
+                            continue
+                        else:
+                            await session.abort_transaction()
+                            logger.error(
+                                f"Ошибка при пополнении кошелька: {e}", exc_info=True
+                            )
+                            raise HTTPException(
+                                status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
+                            )
 
-                except Exception as err:
-                    if session.in_transaction:
-                        await session.abort_transaction()
-                    logger.error(
-                        f"Ошибка при пополнении кошелька: {err}", exc_info=True
-                    )
-                    if isinstance(err, HTTPException):
-                        raise err
-                    raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST, detail=str(err)
-                    )
+                    except Exception as err:
+                        if session.in_transaction:
+                            await session.abort_transaction()
+                        logger.error(
+                            f"Ошибка при пополнении кошелька: {err}", exc_info=True
+                        )
+                        if isinstance(err, HTTPException):
+                            raise err
+                        raise HTTPException(
+                            status_code=status.HTTP_400_BAD_REQUEST, detail=str(err)
+                        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Не удалось выполнить транзакцию из-за постоянных конфликтов записи. Пожалуйста, попробуйте еще раз позже.",
+        )

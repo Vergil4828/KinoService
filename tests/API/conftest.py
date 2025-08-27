@@ -1,3 +1,4 @@
+from tests.API.Wallet.wallet_client import WalletClient
 import pytest, asyncio, os, shutil, uuid
 from tests.API.User.user_client import UserClient
 from tests.data.API_User.user_test_data import CreateUserData
@@ -7,17 +8,22 @@ from bson import ObjectId
 import pytest_asyncio
 
 
+@pytest.fixture(scope="session")
+def api_client_user():
+    return UserClient()
+
+
+@pytest.fixture(scope="session")
+def api_client_wallet():
+    return WalletClient()
+
+
 async def clean_cache_redis(delete_cache):
     await init_redis()
     redis_client = get_redis_client()
     if redis_client:
         await redis_client.delete(delete_cache)
     await close_redis()
-
-
-@pytest.fixture(scope="session")
-def api_client_user():
-    return UserClient()
 
 
 @pytest_asyncio.fixture(scope="class")
@@ -30,6 +36,7 @@ async def registered_user_in_db_per_class(api_client_user, request):
             return (
                 registered_user_data["user_data"],
                 registered_user_data["response_data"],
+                registered_user_data["accessToken"],
             )
         if not user_data:
             user_data = CreateUserData.base_user_data.copy()
@@ -38,9 +45,13 @@ async def registered_user_in_db_per_class(api_client_user, request):
 
         response = await api_client_user.register_user(user_data)
         assert response.status_code == 201
-
-        registered_user_data = {"user_data": user_data, "response_data": response}
-        return user_data, response
+        accessToken = response.json()["accessToken"]
+        registered_user_data = {
+            "user_data": user_data,
+            "response_data": response,
+            "accessToken": accessToken,
+        }
+        return user_data, response, accessToken
 
     yield create_user
 
@@ -48,6 +59,7 @@ async def registered_user_in_db_per_class(api_client_user, request):
         client = AsyncIOMotorClient("mongodb://localhost:27018/?directConnection=true")
         user_id = registered_user_data["response_data"].json()["user"]["id"]
         await clean_cache_redis(f"refresh_token:{user_id}")
+        await clean_cache_redis(f"wallet_data:{user_id}")
 
         try:
             db = client["8_films"]
@@ -59,7 +71,7 @@ async def registered_user_in_db_per_class(api_client_user, request):
         if "TestUploadAvatarPositive" in test_class_name:
             user_id = registered_user_data["response_data"].json()["user"]["id"]
             project_root = os.path.abspath(
-                os.path.join(os.path.dirname(__file__), "..", "..", "..")
+                os.path.join(os.path.dirname(__file__), "..", "..")
             )
             avatars_dir = os.path.join(project_root, "public", "uploads", "avatars")
             avatar_path = os.path.join(avatars_dir, user_id)
@@ -77,6 +89,7 @@ async def registered_user_in_db_per_function(api_client_user, request):
             return (
                 registered_user_data["user_data"],
                 registered_user_data["response_data"],
+                registered_user_data["accessToken"],
             )
         if not user_data:
             user_data = CreateUserData.base_user_data.copy()
@@ -85,9 +98,13 @@ async def registered_user_in_db_per_function(api_client_user, request):
 
         response = await api_client_user.register_user(user_data)
         assert response.status_code == 201
-
-        registered_user_data = {"user_data": user_data, "response_data": response}
-        return user_data, response
+        accessToken = response.json()["accessToken"]
+        registered_user_data = {
+            "user_data": user_data,
+            "response_data": response,
+            "accessToken": accessToken,
+        }
+        return user_data, response, accessToken
 
     yield create_user
 
@@ -96,6 +113,7 @@ async def registered_user_in_db_per_function(api_client_user, request):
         user_id = registered_user_data["response_data"].json()["user"]["id"]
 
         await clean_cache_redis(f"refresh_token:{user_id}")
+        await clean_cache_redis(f"wallet_data:{user_id}")
 
         try:
             db = client["8_films"]
@@ -108,7 +126,7 @@ async def registered_user_in_db_per_function(api_client_user, request):
         if "TestUploadAvatarPositive" in test_class_name:
             user_id = registered_user_data["response_data"].json()["user"]["id"]
             project_root = os.path.abspath(
-                os.path.join(os.path.dirname(__file__), "..", "..", "..")
+                os.path.join(os.path.dirname(__file__), "..", "..")
             )
             avatars_dir = os.path.join(project_root, "public", "uploads", "avatars")
             avatar_path = os.path.join(avatars_dir, user_id)
