@@ -157,8 +157,14 @@ class WalletService:
 
                         await session.commit_transaction()
 
-                        await delete_redis_cache(f"wallet_data:{current_user.id}")
-                        await delete_redis_cache(f"user_data:{current_user.id}")
+                        try:
+                            await delete_redis_cache(f"wallet_data:{current_user.id}")
+                            await delete_redis_cache(f"user_data:{current_user.id}")
+                        except Exception as cache_err:
+                            logger.warning(
+                                f"Failed to delete Redis cache for user {current_user.id}: {cache_err}",
+                                exc_info=True,
+                            )
 
                         transaction_dict = inserted_transaction.model_dump(
                             by_alias=True, mode="json"
@@ -178,20 +184,42 @@ class WalletService:
                         return final_response_payload
 
                     except OperationFailure as e:
-                        if "WriteConflict" in str(e) and attempt < retries - 1:
+                        labels = set(getattr(e, "error_labels", []) or [])
+                        message = str(e)
+                        is_retryable = (
+                            "WriteConflict" in message
+                            or "TransientTransactionError" in message
+                            or "UnknownTransactionCommitResult" in message
+                            or "NoSuchTransaction" in message
+                            or "TransactionCommitted" in message
+                            or bool(
+                                labels
+                                & {
+                                    "TransientTransactionError",
+                                    "UnknownTransactionCommitResult",
+                                }
+                            )
+                        )
+                        if is_retryable and attempt < retries - 1:
+
                             logger.warning(
-                                f"Write conflict detected. Retrying transaction... Attempt {attempt + 1}/{retries}"
+                                f"Transient transaction error. Retrying... Attempt {attempt + 1}/{retries}: {message}"
                             )
-                            await session.abort_transaction()
+                            try:
+                                await session.abort_transaction()
+                            except Exception:
+                                pass
                             continue
-                        else:
+                        try:
                             await session.abort_transaction()
-                            logger.error(
-                                f"Ошибка при пополнении кошелька: {e}", exc_info=True
-                            )
-                            raise HTTPException(
-                                status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
-                            )
+                        except Exception:
+                            pass
+                        logger.error(
+                            f"Ошибка при пополнении кошелька: {e}", exc_info=True
+                        )
+                        raise HTTPException(
+                            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
+                        )
 
                     except Exception as err:
                         if session.in_transaction:

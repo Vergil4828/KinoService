@@ -14,11 +14,14 @@ class DepositWalletRequest(BaseModel):
     @field_validator('amount')
     @classmethod
     def validate_amount(cls, v: float) -> float:
-        if v <= 9.99:
+        if isinstance(v, bool):
+            raise ValueError('Сумма должна быть числом, не булевым значением.')
+        if v is None:
+            raise ValueError('Сумма обязательна для заполнения.')
+        if v < 10:
             raise ValueError('Сумма пополнения должна быть не менее 10.')
         if round(v, 2) != v:
             raise ValueError('Сумма может иметь максимум два знака после запятой.')
-
         return v
 
 class WithdrawWalletRequest(BaseModel):
