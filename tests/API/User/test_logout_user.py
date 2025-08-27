@@ -6,12 +6,14 @@ import pytest
 @pytest.mark.positive
 class TestLogoutUserPositive:
     async def test_logout_user_positive(
-        self, api_client_user, registered_user_in_db_per_function
+        self, api_client_user, registered_user_in_db_per_function, api_client_wallet
     ):
-        user_data, response_data = await registered_user_in_db_per_function(None)
-        accessToken = response_data.json()["accessToken"]
+        user_data, response_data, accessToken = (
+            await registered_user_in_db_per_function(None)
+        )
         user_id = response_data.json()["user"]["id"]
         await api_client_user.get_user_data(accessToken)
+        await api_client_wallet.get_user_wallet(accessToken)
         await init_redis()
         redis_client = get_redis_client()
         if redis_client:
@@ -21,8 +23,12 @@ class TestLogoutUserPositive:
             user_data_in_redis_before_logout = await redis_client.exists(
                 f"user_data:{user_id}"
             )
+            wallet_data_in_redis_before_logout = await redis_client.exists(
+                f"wallet_data:{user_id}"
+            )
             assert refresh_token_in_redis_before_logout == 1
             assert user_data_in_redis_before_logout == 1
+            assert wallet_data_in_redis_before_logout == 1
 
         response = await api_client_user.logout_user(accessToken)
         if redis_client:
@@ -32,8 +38,12 @@ class TestLogoutUserPositive:
             user_data_in_redis_after_logout = await redis_client.exists(
                 f"user_data:{user_id}"
             )
+            wallet_data_in_redis_after_logout = await redis_client.exists(
+                f"wallet_data:{user_id}"
+            )
             assert refresh_token_in_redis_after_logout == 0
             assert user_data_in_redis_after_logout == 0
+            assert wallet_data_in_redis_after_logout == 0
         assert response.status_code == 200
         assert response.json()["message"] == "Logout successful"
         assert (

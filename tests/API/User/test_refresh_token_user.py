@@ -9,7 +9,7 @@ class TestRefreshTokenPositive:
     async def test_get_tokens_positive(
         self, api_client_user, registered_user_in_db_per_function
     ):
-        user_data, response_data = await registered_user_in_db_per_function(
+        user_data, response_data, accessToken = await registered_user_in_db_per_function(
             {
                 "username": "new_tokens_user",
                 "email": "new_tokens@example.com",
@@ -17,7 +17,6 @@ class TestRefreshTokenPositive:
                 "confirmPassword": "Password123",
             }
         )
-        accessToken = response_data.json()["accessToken"]
         refreshToken = response_data.json()["refreshToken"]
         await asyncio.sleep(1)
         response = await api_client_user.get_new_tokens(refreshToken)
@@ -33,7 +32,7 @@ class TestRefreshTokenNegative:
     async def test_get_tokens_after_user_token_delete_in_redis(
         self, api_client_user, registered_user_in_db_per_function
     ):
-        user_data, response_data = await registered_user_in_db_per_function(None)
+        user_data, response_data, _ = await registered_user_in_db_per_function(None)
         refreshToken = response_data.json()["refreshToken"]
         user_id = response_data.json()["user"]["id"]
         await init_redis()
@@ -48,7 +47,7 @@ class TestRefreshTokenNegative:
     async def test_get_tokens_after_user_delete_in_db(
         self, api_client_user, registered_user_in_db_per_function, clean_user_now
     ):
-        user_data, response_data = await registered_user_in_db_per_function(None)
+        user_data, response_data, _ = await registered_user_in_db_per_function(None)
         refreshToken = response_data.json()["refreshToken"]
         await clean_user_now(response_data.json()["user"]["id"])
         response = await api_client_user.get_new_tokens(refreshToken)
@@ -58,7 +57,7 @@ class TestRefreshTokenNegative:
     async def test_get_tokens_with_expired_refresh_token(
         self, api_client_user, registered_user_in_db_per_class
     ):
-        user_data, response_data = await registered_user_in_db_per_class(None)
+        user_data, response_data, _ = await registered_user_in_db_per_class(None)
         valid_token = response_data.json().copy()["refreshToken"]
         valid_payload = jwt.decode(
             valid_token,
@@ -88,7 +87,7 @@ class TestRefreshTokenNegative:
     async def test_get_tokens_with_invalid_refresh_token(
         self, api_client_user, registered_user_in_db_per_class
     ):
-        user_data, response_data = await registered_user_in_db_per_class(None)
+        user_data, response_data, _ = await registered_user_in_db_per_class(None)
         refreshToken = response_data.json()["refreshToken"] + "XXX"
         response = await api_client_user.get_new_tokens(refreshToken)
         assert response.status_code == 401

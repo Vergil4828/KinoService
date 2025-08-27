@@ -181,7 +181,7 @@ class TestCreateUserNegative:
         self, api_client_user, registered_user_in_db_per_function
     ):
 
-        user_data, _ = await registered_user_in_db_per_function(None)
+        user_data, _, _ = await registered_user_in_db_per_function(None)
         response_register = await api_client_user.register_user(user_data)
         assert response_register.status_code == 409
         assert response_register.json()["detail"] == "Email уже занят"

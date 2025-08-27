@@ -18,18 +18,20 @@ files_to_upload = {"avatar": ("file_positive.jpg", image_content, content_type)}
 class UserWalletSubscriptionData:
     data = [
         (
-            "get_user_data",
+            "api_client_user",
             lambda client, token: client.get_user_data(token),
         ),
         (
-            "update_user",
+            "api_client_user",
             lambda client, token: client.update_user(
                 token, UpdateUserData.base_user_update_data
             ),
         ),
-        ("logout_user", lambda client, token: client.logout_user(token)),
+        ("api_client_user", lambda client, token: client.logout_user(token)),
         (
-            "upload_avatar",
+            "api_client_user",
             lambda client, token: client.upload_avatar(token, files_to_upload),
         ),
+        ("api_client_wallet", lambda client, token: client.get_user_wallet(token)),
+        ("api_client_wallet", lambda client, token: client.wallet_deposit(token, 500)),
     ]

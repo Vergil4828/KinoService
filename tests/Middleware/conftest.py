@@ -1,5 +1,6 @@
 import pytest, asyncio, os, shutil, uuid
 from tests.API.User.user_client import UserClient
+from tests.API.Wallet.wallet_client import WalletClient
 from tests.data.API_User.user_test_data import CreateUserData
 from motor.motor_asyncio import AsyncIOMotorClient
 from backend.core.redis_client import get_redis_client, init_redis, close_redis
@@ -18,6 +19,11 @@ async def clean_user_token(user_id):
 @pytest.fixture(scope="session")
 def api_client_user():
     return UserClient()
+
+
+@pytest.fixture(scope="session")
+def api_client_wallet():
+    return WalletClient()
 
 
 @pytest_asyncio.fixture(scope="class")
