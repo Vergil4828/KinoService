@@ -12,6 +12,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
+      - name: Install docker-compose
+        run: |
+          curl -L https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m) -o docker-compose
+          chmod +x docker-compose
+          sudo mv docker-compose /usr/local/bin
+
       - name: Set up Python
         uses: actions/setup-python@v3
         with:
@@ -24,13 +30,13 @@ jobs:
 
       - name: Build and run services
         run: |
-          docker-compose -f docker-compose-test.yml up --build -d
+          docker-compose -f docker-compose.yml up --build -d
 
       - name: Wait for services to be healthy
         run: |
           echo "Waiting for app service to become healthy..."
           RETRIES=30
-          until [ $(docker inspect --format='{{.State.Health.Status}}' $(docker-compose -f docker-compose-test.yml ps -q app)) == 'healthy' ] || [ $RETRIES -eq 0 ]; do
+          until [ $(docker inspect --format='{{.State.Health.Status}}' $(docker-compose -f docker-compose.yml ps -q app)) == 'healthy' ] || [ $RETRIES -eq 0 ]; do
             echo -n "."
             sleep 5
             RETRIES=$(($RETRIES-1))
@@ -43,4 +49,4 @@ jobs:
 
       - name: Run tests
         run: |
-          docker-compose -f docker-compose-test.yml exec app pytest tests
+          docker-compose -f docker-compose.yml exec app pytest tests
