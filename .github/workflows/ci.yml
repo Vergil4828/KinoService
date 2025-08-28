@@ -30,13 +30,13 @@ jobs:
 
       - name: Build and run services
         run: |
-          docker-compose -f ../../docker-compose.yaml up --build -d
+          docker-compose -f ../docker-compose.yaml up --build -d
 
       - name: Wait for services to be healthy
         run: |
           echo "Waiting for app service to become healthy..."
           RETRIES=30
-          until [ $(docker inspect --format='{{.State.Health.Status}}' $(docker-compose -f ../../docker-compose.yaml ps -q app)) == 'healthy' ] || [ $RETRIES -eq 0 ]; do
+          until [ $(docker inspect --format='{{.State.Health.Status}}' $(docker-compose -f ../docker-compose.yaml ps -q app)) == 'healthy' ] || [ $RETRIES -eq 0 ]; do
             echo -n "."
             sleep 5
             RETRIES=$(($RETRIES-1))
@@ -49,4 +49,4 @@ jobs:
 
       - name: Run tests
         run: |
-          docker-compose -f ../../docker-compose.yaml exec app pytest tests
+          docker-compose -f ../docker-compose.yaml exec app pytest tests
