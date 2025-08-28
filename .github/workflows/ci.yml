@@ -54,7 +54,7 @@ jobs:
         run: |
           echo "Waiting for db service to become healthy..."
           RETRIES=30
-          until [ $(docker inspect --format='{{.State.Health.Status}}' $(docker-compose -f ../docker-compose.yaml ps -q db)) == 'healthy' ] || [ $RETRIES -eq 0 ]; do
+          until [ $(docker inspect --format='{{.State.Health.Status}}' $(docker-compose -f docker-compose.yaml ps -q db)) == 'healthy' ] || [ $RETRIES -eq 0 ]; do
             echo -n "."
             sleep 5
             RETRIES=$(($RETRIES-1))
