@@ -65,6 +65,10 @@ jobs:
           fi
           echo "Database is healthy."
 
+      - name: Create allure-results directory on host
+        run: |
+          mkdir -p allure-results
+      
       - name: Run tests
         run: |
           docker-compose -f docker-compose.yaml exec -T app pytest --alluredir=/app/allure-results tests
