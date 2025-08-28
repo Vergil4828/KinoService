@@ -8,6 +8,16 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      PORT: 3005
+      MONGO_URI: mongodb://db:27017/8_films
+      MONGO_DB_NAME: 8_films
+      REDIS_URL: redis://redis:6379
+      BCRYPT_ROUNDS: 4
+      JWT_SECRET: ${{ secrets.JWT_SECRET }}
+      REFRESH_SECRET: ${{ secrets.REFRESH_SECRET }}
+      CLIENT_URL: ${{ secrets.CLIENT_URL }}
+      STATIC_FILES_DIR: ${{ secrets.STATIC_FILES_DIR }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
