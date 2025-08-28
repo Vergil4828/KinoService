@@ -70,7 +70,7 @@ jobs:
           docker-compose -f docker-compose.yaml exec -T app pytest tests
 
       - name: Allure Report
-        uses: simple-elf/allure-report-publisher@master
+        uses: simple-elf/allure-report-publisher@v1.0.0
         with:
           allure_results: allure-results
           github_token: ${{ secrets.GITHUB_TOKEN }}
