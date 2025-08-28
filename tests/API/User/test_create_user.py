@@ -37,7 +37,6 @@ class TestCreateUserPositive:
             },
         }
         response = await api_client_user.register_user(user_data)
-        print(response.json())
         assert response.status_code == 201
         assert response.json()["user"]["email"] == email
         assert "accessToken" in response.json()

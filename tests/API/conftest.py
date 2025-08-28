@@ -56,7 +56,7 @@ async def registered_user_in_db_per_class(api_client_user, request):
     yield create_user
 
     if registered_user_data:
-        client = AsyncIOMotorClient("mongodb://localhost:27018/?directConnection=true")
+        client = AsyncIOMotorClient(os.getenv("MONGO_URI"))
         user_id = registered_user_data["response_data"].json()["user"]["id"]
         await clean_cache_redis(f"refresh_token:{user_id}")
         await clean_cache_redis(f"wallet_data:{user_id}")
@@ -109,7 +109,7 @@ async def registered_user_in_db_per_function(api_client_user, request):
     yield create_user
 
     if registered_user_data:
-        client = AsyncIOMotorClient("mongodb://localhost:27018/?directConnection=true")
+        client = AsyncIOMotorClient(os.getenv("MONGO_URI"))
         user_id = registered_user_data["response_data"].json()["user"]["id"]
 
         await clean_cache_redis(f"refresh_token:{user_id}")
@@ -139,7 +139,7 @@ async def clean_user_now():
     async def delete_user(user_id):
 
         await clean_cache_redis(f"refresh_token:{user_id}")
-        client = AsyncIOMotorClient("mongodb://localhost:27018/?directConnection=true")
+        client = AsyncIOMotorClient(os.getenv("MONGO_URI"))
         db = client["8_films"]
         try:
             user_id_obj = ObjectId(user_id)
@@ -155,7 +155,7 @@ async def clean_user_now():
 async def prepare_db_and_redis_without_basic_plan():
     basic_plan = None
     basic_plan_redis = None
-    client = AsyncIOMotorClient("mongodb://localhost:27018/?directConnection=true")
+    client = AsyncIOMotorClient(os.getenv("MONGO_URI"))
     db = client["8_films"]
 
     basic_plan = await db.subscriptionplans.find_one({"price": 0})
