@@ -50,10 +50,20 @@ jobs:
         run: |
           docker-compose -f docker-compose.yaml up --build -d
 
-      - name: Wait for services to start
+      - name: Wait for MongoDB service to be healthy
         run: |
-          echo "Waiting for all services to start..."
-          sleep 30
+          echo "Waiting for db service to become healthy..."
+          RETRIES=30
+          until [ $(docker inspect --format='{{.State.Health.Status}}' $(docker-compose -f ../docker-compose.yaml ps -q db)) == 'healthy' ] || [ $RETRIES -eq 0 ]; do
+            echo -n "."
+            sleep 5
+            RETRIES=$(($RETRIES-1))
+          done
+          if [ $RETRIES -eq 0 ]; then
+            echo "Database service failed to become healthy."
+            exit 1
+          fi
+          echo "Database is healthy."
 
       - name: Run tests
         run: |
