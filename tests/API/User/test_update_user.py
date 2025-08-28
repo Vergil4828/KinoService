@@ -275,7 +275,7 @@ class TestUpdateUserNegative:
         update_user_data["email"] = user_data["email"]
         del update_user_data["currentPassword"]
         response = await api_client_user.update_user(accessToken, update_user_data)
-        assert response.status_code == 400
+        assert response.status_code == 422
         assert response.json()["detail"][0]["msg"] == "Field required"
 
     async def test_login_user_with_duplicate_field(
