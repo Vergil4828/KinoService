@@ -67,7 +67,7 @@ jobs:
 
       - name: Run tests
         run: |
-          docker-compose -f docker-compose.yaml exec -T app pytest tests
+          docker-compose -f docker-compose.yaml exec -T app pytest --alluredir=/app/allure-results tests
 
       - name: Copy Allure results from container
         run: |
