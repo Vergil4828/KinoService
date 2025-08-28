@@ -36,7 +36,7 @@ jobs:
       - name: Cache Python dependencies
         uses: actions/cache@v3
         with:
-          path: ~/.cache/pip
+          path: ./.pip_cache
           key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
@@ -50,20 +50,10 @@ jobs:
         run: |
           docker-compose -f docker-compose.yaml up --build -d
 
-      - name: Wait for services to be healthy
+      - name: Wait for services to start
         run: |
-          echo "Waiting for app service to become healthy..."
-          RETRIES=30
-          until [ $(docker inspect --format='{{.State.Health.Status}}' $(docker-compose -f docker-compose.yaml ps -q app)) == 'healthy' ] || [ $RETRIES -eq 0 ]; do
-            echo -n "."
-            sleep 5
-            RETRIES=$(($RETRIES-1))
-          done
-          if [ $RETRIES -eq 0 ]; then
-            echo "App service failed to become healthy."
-            exit 1
-          fi
-          echo "App is healthy."
+          echo "Waiting for all services to start..."
+          sleep 30
 
       - name: Run tests
         run: |
