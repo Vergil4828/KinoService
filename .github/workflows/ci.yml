@@ -68,3 +68,27 @@ jobs:
       - name: Run tests
         run: |
           docker-compose -f docker-compose.yaml exec -T app pytest tests
+
+      - name: Get Allure history
+        uses: actions/checkout@v2
+        with:
+          ref: gh-pages
+          path: gh-pages
+
+      - name: Generate Allure Report
+        uses: allure-framework/allure-github-action@v2
+        with:
+          report_history: gh-pages/allure-history
+          report_dir: allure-report
+          publish_dir: allure-report
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          allure_results: allure-results
+          list_files: true
+          allure_args: "--clean"
+
+      - name: Publish Allure Report to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: allure-report
+          publish_branch: gh-pages
