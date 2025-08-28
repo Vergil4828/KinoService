@@ -1,1 +1,1 @@
-{"total":0,"items":[]}
+{"total":3,"items":[{"uid":"91224fe39fbffc10e78aee77c519bf21","name":"tests.API.User","statistic":{"failed":0,"broken":0,"skipped":0,"passed":343,"unknown":0,"total":343}},{"uid":"6b299c2bb1e7b6e06d6b277c539ba686","name":"tests.Middleware","statistic":{"failed":0,"broken":0,"skipped":0,"passed":24,"unknown":0,"total":24}},{"uid":"187a577a4564a90381c293a0b74baeba","name":"tests.API.Wallet","statistic":{"failed":0,"broken":0,"skipped":0,"passed":14,"unknown":0,"total":14}}]}
