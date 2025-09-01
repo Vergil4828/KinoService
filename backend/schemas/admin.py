@@ -1,18 +1,13 @@
 from __future__ import annotations
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Optional, Dict, Any, List
 from pydantic import Field, BaseModel, ConfigDict
-from beanie import Document, PydanticObjectId
-from pymongo import IndexModel
+from beanie import PydanticObjectId
 from pydantic import field_validator
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .user import UserResponseBase
-
-
-
-
 
 
 class AdminActionResponse(BaseModel):
@@ -33,24 +28,24 @@ class AdminActionResponse(BaseModel):
         populate_by_name=True,
         json_encoders={object: str, datetime: lambda v: v.isoformat()}
     )
- 
+
  
 class AdminChangePlanRequest(BaseModel):
     name: str = Field(
-        ..., 
-        min_length=1, 
+        ...,
+        min_length=1,
         max_length=100,
         description="Название тарифного плана",
         examples=["Премиум"]
     )
     price: float = Field(
-        ...,  
+        ...,
         ge=0,
         description="Цена подписки",
         examples=[999]
     )
     renewalPeriod: int = Field(
-        default=30,  
+        default=30,
         ge=1,
         description="Период подписки в днях",
         examples=[30]
@@ -88,7 +83,7 @@ class AdminChangePlanRequest(BaseModel):
 
 class AdminChangeUserRequest(BaseModel):
     username: Optional[str] = Field(None, min_length=1, max_length=50)
-    email: Optional[str] = None  
+    email: Optional[str] = None
     wallet: Optional[Dict[str, Any]] = None
     currentSubscription: Optional[Dict[str, Any]] = None
 
@@ -132,7 +127,7 @@ class AdminChangeUserRequest(BaseModel):
                     v['planId'] = PydanticObjectId(v['planId'])
                 except:
                     raise ValueError("Invalid planId format")
-            
+
             if 'endDate' in v and v['endDate']:
                 try:
                     if isinstance(v['endDate'], str):

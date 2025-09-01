@@ -1,21 +1,19 @@
-from fastapi import APIRouter, status, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from typing import Dict, Any
-from beanie.odm.fields import PydanticObjectId 
 from backend.core.dependencies import get_current_user
 from backend.models.user import User
-from backend.models.transaction import Transaction
 
-from backend.services.wallet_service import WalletService 
+from backend.services.wallet_service import WalletService
 
-from backend.schemas.wallet import (
-    DepositWalletRequest,
-    WithdrawWalletRequest
-)
+from backend.schemas.wallet import DepositWalletRequest, WithdrawWalletRequest
 
 router = APIRouter(prefix="/api", tags=["Wallet"])
 
-@router.get('/wallet')
-async def get_wallet_data_route(current_user: User = Depends(get_current_user)) -> Dict[str, Any]:
+
+@router.get("/wallet")
+async def get_wallet_data_route(
+    current_user: User = Depends(get_current_user),
+) -> Dict[str, Any]:
     """
     **Эндпоинт для получения данных о кошельке пользователя.**
     Возвращает информацию о текущем кошельке пользователя.
@@ -24,10 +22,10 @@ async def get_wallet_data_route(current_user: User = Depends(get_current_user)) 
     """
     return await WalletService.get_wallet_data(current_user)
 
-@router.post('/wallet/deposit')
+
+@router.post("/wallet/deposit")
 async def deposit_wallet_route(
-    request_data: DepositWalletRequest,
-    current_user: User = Depends(get_current_user)
+    request_data: DepositWalletRequest, current_user: User = Depends(get_current_user)
 ) -> Dict[str, Any]:
     """
     **Эндпоинт для пополнения кошелька пользователя.**
@@ -40,10 +38,10 @@ async def deposit_wallet_route(
     """
     return await WalletService.deposit_wallet(request_data, current_user)
 
-@router.post('/wallet/withdraw')
+
+@router.post("/wallet/withdraw")
 async def withdraw_wallet_route(
-    request_data: WithdrawWalletRequest,
-    current_user: User = Depends(get_current_user)
+    request_data: WithdrawWalletRequest, current_user: User = Depends(get_current_user)
 ) -> Dict[str, Any]:
     """
     **Эндпоинт для вывода средств из кошелька пользователя.**

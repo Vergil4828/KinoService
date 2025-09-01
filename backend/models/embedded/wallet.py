@@ -1,10 +1,8 @@
 from __future__ import annotations
-from datetime import datetime, timezone
-from typing import Optional, List
+from datetime import datetime
+from typing import List
 from pydantic import Field, BaseModel, ConfigDict
 from beanie import PydanticObjectId
-
-
 
 
 class WalletEmbedded(BaseModel):

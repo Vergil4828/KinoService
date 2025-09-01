@@ -1,5 +1,9 @@
 from tests.API.Wallet.wallet_client import WalletClient
-import pytest, asyncio, os, shutil, uuid
+import pytest
+import asyncio
+import os
+import shutil
+import uuid
 from tests.API.User.user_client import UserClient
 from tests.data.API_User.user_test_data import CreateUserData
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -166,7 +170,7 @@ async def prepare_db_and_redis_without_basic_plan():
     redis_client = get_redis_client()
     if redis_client:
         basic_plan_redis = await redis_client.get("plan:Базовый")
-        await redis_client.delete(f"plan:Базовый")
+        await redis_client.delete("plan:Базовый")
 
     yield
 

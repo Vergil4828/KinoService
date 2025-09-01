@@ -45,7 +45,7 @@ class TestUploadAvatarPositive:
         user_data, response_data, accessToken = await registered_user_in_db_per_class(
             None
         )
-        filename = f"file_positive_2_mb.jpg"
+        filename = "file_positive_2_mb.jpg"
         image_path = os.path.join(TEST_UPLOAD_AVATARS_DIR, "valid_avatars", filename)
         async with aiofiles.open(image_path, "rb") as image_file:
             image_content = await image_file.read()
@@ -71,7 +71,7 @@ class TestUploadAvatarPositive:
             user_data_before_upload = await redis_client.exists(f"user_data:{user_id}")
             assert user_data_before_upload == 1
 
-        filename = f"file_positive_2_mb.jpg"
+        filename = "file_positive_2_mb.jpg"
         image_path = os.path.join(TEST_UPLOAD_AVATARS_DIR, "valid_avatars", filename)
         async with aiofiles.open(image_path, "rb") as image_file:
             image_content = await image_file.read()
@@ -99,7 +99,7 @@ class TestUploadAvatarNegative:
             await registered_user_in_db_per_function(None)
         )
         await clean_user_now(response_data.json()["user"]["id"])
-        filename = f"file_positive_2_mb.jpg"
+        filename = "file_positive_2_mb.jpg"
         image_path = os.path.join(TEST_UPLOAD_AVATARS_DIR, "valid_avatars", filename)
         async with aiofiles.open(image_path, "rb") as image_file:
             image_content = await image_file.read()
@@ -159,7 +159,7 @@ class TestUploadAvatarNegative:
         user_data, response_data, accessToken = await registered_user_in_db_per_class(
             None
         )
-        filename = f"file_invalid_extension.exe"
+        filename = "file_invalid_extension.exe"
         image_path = os.path.join(TEST_UPLOAD_AVATARS_DIR, "invalid_avatars", filename)
         async with aiofiles.open(image_path, "rb") as image_file:
             image_content = await image_file.read()
@@ -182,7 +182,7 @@ class TestUploadAvatarNegative:
         user_data, response_data, accessToken = await registered_user_in_db_per_class(
             None
         )
-        filename = f"file_invalid_more_2_mb.jpg"
+        filename = "file_invalid_more_2_mb.jpg"
         image_path = os.path.join(TEST_UPLOAD_AVATARS_DIR, "invalid_avatars", filename)
         async with aiofiles.open(image_path, "rb") as image_file:
             image_content = await image_file.read()

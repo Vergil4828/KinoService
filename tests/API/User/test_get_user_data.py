@@ -1,6 +1,4 @@
-from jose import jwt
-
-import pytest, time
+import pytest
 
 from tests.API.conftest import clean_cache_redis
 

@@ -1,11 +1,10 @@
-from fastapi import APIRouter, status, HTTPException, Depends, UploadFile, File
+from fastapi import APIRouter, status, Depends, UploadFile, File
 from backend.services.user_service import UserService
 from backend.core.dependencies import get_current_user
 from starlette.requests import Request
 from backend.schemas.user import (
     CreateUserRequest,
     LoginUserRequest,
-    UserResponseBase,
     UpdateUserRequest,
 )
 from backend.models.user import User

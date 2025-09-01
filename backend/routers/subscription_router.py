@@ -1,24 +1,23 @@
-import logging
 from typing import List
 
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, Depends
 
 from backend.models.user import User
 from backend.core.dependencies import get_current_user
-from backend.core.config import logger
 
-from backend.services.subscription_service import SubscriptionService 
+from backend.services.subscription_service import SubscriptionService
 from backend.schemas.subscription import (
     SubscriptionPlanResponse,
     PurchaseSubscriptionRequest,
-    PurchaseSubscriptionResponse
+    PurchaseSubscriptionResponse,
 )
 from backend.models.embedded.subscription import CurrentSubscriptionEmbedded
 
 
 router = APIRouter(prefix="/api", tags=["Subscriptions"])
 
-@router.get('/plans', response_model=List[SubscriptionPlanResponse])
+
+@router.get("/plans", response_model=List[SubscriptionPlanResponse])
 async def get_all_plans_route():
     """
     **Эндпоинт для получения всех тарифных планов.**
@@ -28,7 +27,8 @@ async def get_all_plans_route():
     """
     return await SubscriptionService.get_all_plans()
 
-@router.get('/plans/{planId}', response_model=SubscriptionPlanResponse)
+
+@router.get("/plans/{planId}", response_model=SubscriptionPlanResponse)
 async def get_plan_by_id_route(planId: str):
     """
     **Эндпоинт для получения тарифного плана по ID.**
@@ -40,10 +40,11 @@ async def get_plan_by_id_route(planId: str):
     """
     return await SubscriptionService.get_plan_by_id(planId)
 
-@router.post('/subscriptions/purchase', response_model=PurchaseSubscriptionResponse)
+
+@router.post("/subscriptions/purchase", response_model=PurchaseSubscriptionResponse)
 async def purchase_subscription_route(
     request_data: PurchaseSubscriptionRequest,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
     """
     **Эндпоинт для покупки подписки.**
@@ -56,8 +57,11 @@ async def purchase_subscription_route(
     """
     return await SubscriptionService.purchase_subscription(request_data, current_user)
 
-@router.get('/subscriptions/current', response_model=CurrentSubscriptionEmbedded)
-async def get_current_subscription_route(current_user: User = Depends(get_current_user)):
+
+@router.get("/subscriptions/current", response_model=CurrentSubscriptionEmbedded)
+async def get_current_subscription_route(
+    current_user: User = Depends(get_current_user),
+):
     """
     **Эндпоинт для получения текущей подписки пользователя.**
     Возвращает данные о текущей подписке пользователя.

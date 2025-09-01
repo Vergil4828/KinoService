@@ -1,15 +1,6 @@
 from __future__ import annotations
-from backend.core.config import (
-    logger,
-    PORT,
-    ALLOWED_ORIGINS,
-    PUBLIC_DIR,
-    AVATAR_UPLOAD_DIR,
-    JWT_SECRET_KEY,
-    REFRESH_SECRET_KEY,
-    JWT_ALGORITHM,
-)
-from backend.core.database import init_db, get_motor_client
+from backend.core.config import logger, PORT, PUBLIC_DIR
+from backend.core.database import init_db
 from backend.core.redis_client import (
     init_redis,
     close_redis,
@@ -17,17 +8,12 @@ from backend.core.redis_client import (
     load_subscription_plans,
 )
 from backend.core.tasks import init_scheduler
-from dotenv import load_dotenv
 from contextlib import asynccontextmanager
-from typing import AsyncContextManager, Any
+from typing import AsyncContextManager
 from fastapi import FastAPI
-from fastapi.middleware import Middleware
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import JSONResponse
-import json
 from beanie import PydanticObjectId
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from backend.models import (
     User,

@@ -11,6 +11,7 @@ from .user import UserResponseBase, CreateUserRequest, LoginUserRequest, UpdateU
 from .token import RefreshTokenRequest
 from .wallet import DepositWalletRequest, WithdrawWalletRequest
 
+
 __all__ = [
     'AdminActionResponse',
     'AdminChangePlanRequest',

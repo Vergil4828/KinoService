@@ -1,7 +1,6 @@
-import datetime
-import time
-
-import pytest, uuid, copy, pytest_asyncio, asyncio
+import pytest
+import uuid
+import copy
 from tests.data.API_User.user_test_data import CreateUserData
 
 

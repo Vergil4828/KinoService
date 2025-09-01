@@ -1,8 +1,6 @@
-import logging
 from datetime import datetime, timedelta, timezone
 from typing import Dict, Any, Optional
 from jose import JWTError, jwt, ExpiredSignatureError
-import bcrypt
 from fastapi import HTTPException, Depends, status, Request
 from beanie.odm.fields import PydanticObjectId
 from backend.core.redis_client import get_redis_client

@@ -1,4 +1,5 @@
-import pytest, asyncio
+import pytest
+import asyncio
 from tests.data.API_Wallet.wallet_test_data import WalletDepositData
 
 

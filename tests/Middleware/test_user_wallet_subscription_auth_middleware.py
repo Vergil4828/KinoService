@@ -1,5 +1,6 @@
 from jose import jwt
-import pytest, time
+import pytest
+import time
 from .middleware_test_data import UserWalletSubscriptionData
 
 

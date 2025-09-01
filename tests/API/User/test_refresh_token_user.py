@@ -1,6 +1,8 @@
 from jose import jwt
 from backend.core.redis_client import get_redis_client, init_redis, close_redis
-import pytest, time, asyncio
+import pytest
+import time
+import asyncio
 
 
 @pytest.mark.asyncio
@@ -9,13 +11,15 @@ class TestRefreshTokenPositive:
     async def test_get_tokens_positive(
         self, api_client_user, registered_user_in_db_per_function
     ):
-        user_data, response_data, accessToken = await registered_user_in_db_per_function(
-            {
-                "username": "new_tokens_user",
-                "email": "new_tokens@example.com",
-                "password": "Password123",
-                "confirmPassword": "Password123",
-            }
+        user_data, response_data, accessToken = (
+            await registered_user_in_db_per_function(
+                {
+                    "username": "new_tokens_user",
+                    "email": "new_tokens@example.com",
+                    "password": "Password123",
+                    "confirmPassword": "Password123",
+                }
+            )
         )
         refreshToken = response_data.json()["refreshToken"]
         await asyncio.sleep(1)

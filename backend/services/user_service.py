@@ -142,7 +142,7 @@ class UserService:
 
             return response_data
 
-        except DuplicateKeyError as e:
+        except DuplicateKeyError:
             logger.warning(
                 f"Попытка создания пользователя с существующим email: {request_data.email}"
             )
@@ -375,7 +375,7 @@ class UserService:
                 "user": final_user_response_dict,
             }
 
-        except DuplicateKeyError as e:
+        except DuplicateKeyError:
             logger.warning(
                 f"Попытка обновления пользователя с существующим email: {request_data.email}"
             )

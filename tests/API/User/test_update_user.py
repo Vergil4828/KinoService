@@ -1,4 +1,5 @@
-import pytest, uuid
+import pytest
+import uuid
 from backend.core.redis_client import get_redis_client, init_redis, close_redis
 from tests.data.API_User.user_test_data import UpdateUserData
 

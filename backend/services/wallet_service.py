@@ -1,19 +1,15 @@
 import asyncio
 import json
-import logging
 from pymongo.errors import OperationFailure
 from datetime import datetime, timezone
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any
 from fastapi import HTTPException, status, Depends
-from fastapi.responses import JSONResponse
 from backend.core.redis_client import get_redis_client, delete_redis_cache
 from backend.models.user import User
 from backend.models.transaction import Transaction
 from backend.core.database import get_motor_client
 from backend.core.config import logger
-from backend.schemas.wallet import DepositWalletRequest, WithdrawWalletRequest
-from backend.schemas.transaction import TransactionResponse
-from beanie.odm.fields import PydanticObjectId
+from backend.schemas.wallet import DepositWalletRequest
 from backend.core.dependencies import get_current_user
 
 

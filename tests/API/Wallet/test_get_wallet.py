@@ -1,7 +1,5 @@
 import pytest
 
-from tests.API.conftest import clean_cache_redis
-
 
 @pytest.mark.asyncio
 @pytest.mark.positive

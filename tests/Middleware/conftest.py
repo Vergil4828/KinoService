@@ -1,4 +1,8 @@
-import pytest, asyncio, os, shutil, uuid
+import pytest
+import asyncio
+import os
+import shutil
+import uuid
 from tests.API.User.user_client import UserClient
 from tests.API.Wallet.wallet_client import WalletClient
 from tests.data.API_User.user_test_data import CreateUserData
