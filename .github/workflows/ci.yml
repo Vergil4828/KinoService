@@ -85,10 +85,6 @@ jobs:
           allure_report: allure-report
           gh_pages: gh-pages
 
-      - name: Add .nojekyll file
-        run: |
-          touch allure-report/.nojekyll
-          
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         if: always()
