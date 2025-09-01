@@ -65,6 +65,36 @@ jobs:
           fi
           echo "Database is healthy."
 
+      - name: Create allure-results directory on host
+        run: |
+          mkdir -p allure-results
+      
       - name: Run tests
         run: |
-          docker-compose -f docker-compose.yaml exec -T app pytest tests
+          docker-compose -f docker-compose.yaml exec -T app pytest --alluredir=/app/allure-results tests
+
+      - name: Copy Allure results from container
+        run: |
+          docker cp $(docker-compose -f docker-compose.yaml ps -q app):/app/allure-results ./allure-results
+          
+      - name: Generate Allure Report
+        uses: simple-elf/allure-report-action@master
+        if: always()
+        with:
+          allure_results: allure-results
+          allure_report: allure-report
+          gh_pages: gh-pages
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        if: always()
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: allure-report
+          
+      - name: Upload Allure results as artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: allure-results
+          path: allure-results/
