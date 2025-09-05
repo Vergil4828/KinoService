@@ -1,19 +1,15 @@
 import asyncio
 import json
-import logging
 from pymongo.errors import OperationFailure
 from datetime import datetime, timezone
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any
 from fastapi import HTTPException, status, Depends
-from fastapi.responses import JSONResponse
 from backend.core.redis_client import get_redis_client, delete_redis_cache
 from backend.models.user import User
 from backend.models.transaction import Transaction
 from backend.core.database import get_motor_client
 from backend.core.config import logger
-from backend.schemas.wallet import DepositWalletRequest, WithdrawWalletRequest
-from backend.schemas.transaction import TransactionResponse
-from beanie.odm.fields import PydanticObjectId
+from backend.schemas.wallet import DepositWalletRequest
 from backend.core.dependencies import get_current_user
 
 
@@ -164,12 +160,6 @@ class WalletService:
                         transaction_dict["_id"] = str(transaction_dict["_id"])
                         transaction_dict["userId"] = str(transaction_dict["userId"])
 
-                        final_response_payload = {
-                            "success": True,
-                            "newBalance": updated_user.wallet.balance,
-                            "transaction": transaction_dict,
-                        }
-
                     except OperationFailure as e:
                         labels = set(getattr(e, "error_labels", []) or [])
                         message = str(e)
@@ -190,7 +180,8 @@ class WalletService:
                         if is_retryable and attempt < retries - 1:
 
                             logger.warning(
-                                f"Transient transaction error. Retrying... Attempt {attempt + 1}/{retries}: {message}"
+                                f"Transient transaction error. Retrying... \
+                                Attempt {attempt + 1}/{retries}: {message}"
                             )
                             try:
                                 await session.abort_transaction()
@@ -245,5 +236,6 @@ class WalletService:
             }
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Не удалось выполнить транзакцию из-за постоянных конфликтов записи. Пожалуйста, попробуйте еще раз позже.",
+            detail="Не удалось выполнить транзакцию из-за постоянных конфликтов записи. \
+            Пожалуйста, попробуйте еще раз позже.",
         )

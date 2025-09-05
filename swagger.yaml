@@ -1,7 +1,7 @@
 openapi: 3.0.4
 info:
-  title: Киносервис API
-  description: API для управления пользователями, подписками и контентом киносервиса.
+  title: Киносервис api
+  description: api для управления пользователями, подписками и контентом киносервиса.
   version: 1.0.0
 servers:
   - url: http://localhost:3005/api

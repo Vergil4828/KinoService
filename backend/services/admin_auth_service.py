@@ -1,11 +1,9 @@
 import bcrypt  # Для хеширования и проверки паролей
 from jose import JWTError, jwt
-from typing import Dict  # Для типизации словарей и любых типов данных
 from fastapi import (
     HTTPException,
     status,
     Request,
-    Query,
     Depends,
 )  # HTTPException и status для обработки ошибок FastAPI, Request для доступа к заголовкам
 from beanie import (
@@ -142,7 +140,8 @@ class AdminAuthService:
 
             if not old_refresh_token_found:
                 logger.warning(
-                    f"Old refresh token {request_data.refreshToken[:10]}... not found in user's refreshTokens array "
+                    f"Old refresh token {request_data.refreshToken[:10]}... \
+                    not found in user's refreshTokens array "
                     f"for user {user_id}. Possible replay attack or race condition."
                 )
                 raise HTTPException(

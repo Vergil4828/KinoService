@@ -4,13 +4,11 @@ from datetime import datetime, timezone, timedelta
 from typing import List, Dict, Any, Optional
 from fastapi import HTTPException, status, Depends
 from beanie.odm.fields import PydanticObjectId
-from motor.motor_asyncio import AsyncIOMotorClientSession
 from backend.core.dependencies import get_current_user
 from backend.core.redis_client import get_redis_client, delete_redis_cache
 from backend.models.user import User
 from backend.models.transaction import Transaction
 from backend.models.subscription import SubscriptionPlan, SubscriptionHistory
-from backend.models.embedded.subscription import CurrentSubscriptionEmbedded
 from backend.core.database import get_motor_client
 from backend.core.config import logger
 from backend.schemas.subscription import (
@@ -127,7 +125,8 @@ class SubscriptionService:
             try:
                 async with session.start_transaction():
                     logger.debug(
-                        f"purchase_subscription: Поиск пользователя с ID {current_user.id} и плана с ID {request_data.planId} в БД."
+                        f"purchase_subscription: Поиск пользователя с \
+                        ID {current_user.id} и плана с ID {request_data.planId} в БД."
                     )
                     user = await User.get(current_user.id, session=session)
                     plan = await SubscriptionPlan.get(
@@ -136,7 +135,8 @@ class SubscriptionService:
 
                     if not user:
                         logger.error(
-                            f"purchase_subscription: Пользователь с ID {current_user.id} не найден во время транзакции. Откат."
+                            f"purchase_subscription: Пользователь с \
+                            ID {current_user.id} не найден во время транзакции. Откат."
                         )
                         raise HTTPException(
                             status_code=status.HTTP_404_NOT_FOUND,
@@ -144,7 +144,8 @@ class SubscriptionService:
                         )
                     if not plan:
                         logger.error(
-                            f"purchase_subscription: План с ID {request_data.planId} не найден во время транзакции. Откат."
+                            f"purchase_subscription: План с \
+                            ID {request_data.planId} не найден во время транзакции. Откат."
                         )
                         raise HTTPException(
                             status_code=status.HTTP_404_NOT_FOUND,
@@ -152,7 +153,8 @@ class SubscriptionService:
                         )
 
                     logger.debug(
-                        f"purchase_subscription: Пользователь и план найдены. Баланс пользователя: {user.wallet.balance}, Цена плана: {plan.price}"
+                        f"purchase_subscription: Пользователь и план найдены. \
+                        Баланс пользователя: {user.wallet.balance}, Цена плана: {plan.price}"
                     )
 
                     now = datetime.now(timezone.utc)
@@ -176,7 +178,9 @@ class SubscriptionService:
 
                         if user.wallet.balance < plan.price:
                             logger.warning(
-                                f"purchase_subscription: Недостаточно средств для пользователя {user.id}. Баланс: {user.wallet.balance}, Цена плана: {plan.price}. Требуется оплата."
+                                f"purchase_subscription: Недостаточно средств для \
+                                пользователя {user.id}. Баланс: {user.wallet.balance}, \
+                                Цена плана: {plan.price}. Требуется оплата."
                             )
                             return PurchaseSubscriptionResponse(
                                 success=False,
@@ -186,7 +190,8 @@ class SubscriptionService:
                             )
 
                         logger.debug(
-                            f"purchase_subscription: Создание транзакции для пользователя {user.id}. Сумма: -{plan.price}"
+                            f"purchase_subscription: Создание транзакции для \
+                            пользователя {user.id}. Сумма: -{plan.price}"
                         )
                         transaction = Transaction(
                             userId=user.id,
@@ -213,7 +218,8 @@ class SubscriptionService:
                         user.wallet.balance -= plan.price
                         user.wallet.transactionIds.append(transaction.id)
                         logger.debug(
-                            f"purchase_subscription: Баланс пользователя {user.id} обновлен до {user.wallet.balance}."
+                            f"purchase_subscription: Баланс \
+                            пользователя {user.id} обновлен до {user.wallet.balance}."
                         )
 
                         response_transaction = TransactionResponse(
@@ -232,7 +238,8 @@ class SubscriptionService:
                         )
 
                         logger.debug(
-                            f"purchase_subscription: Создание записи истории подписки для пользователя {user.id}. Конечная дата: {end_date}"
+                            f"purchase_subscription: Создание записи истории подписки для \
+                            пользователя {user.id}. Конечная дата: {end_date}"
                         )
                         subscription_history = SubscriptionHistory(
                             userId=user.id,
@@ -248,7 +255,8 @@ class SubscriptionService:
                         )
                         await subscription_history.insert(session=session)
                         logger.debug(
-                            f"purchase_subscription: Запись истории подписки {subscription_history.id} успешно создана."
+                            f"purchase_subscription: Запись истории \
+                            подписки {subscription_history.id} успешно создана."
                         )
 
                     user.currentSubscription = CurrentSubscriptionEmbedded(
@@ -311,7 +319,8 @@ class SubscriptionService:
 
                     await delete_redis_cache(f"user_subscription:{current_user.id}")
                     logger.info(
-                        f"purchase_subscription: Транзакция подписки для пользователя {user.id} успешно завершена. Возврат ответа."
+                        f"purchase_subscription: Транзакция подписки для пользователя {user.id} \
+                        успешно завершена. Возврат ответа."
                     )
                     return response
 
@@ -319,7 +328,8 @@ class SubscriptionService:
                 if session.in_transaction:
                     await session.abort_transaction()
                     logger.warning(
-                        f"purchase_subscription: Транзакция отменена из-за HTTP исключения: {http_exc.detail} (Статус: {http_exc.status_code})"
+                        f"purchase_subscription: Транзакция отменена из-за HTTP \
+                        исключения: {http_exc.detail} (Статус: {http_exc.status_code})"
                     )
                 raise http_exc
             except Exception as err:

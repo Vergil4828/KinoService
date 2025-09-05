@@ -4,6 +4,7 @@ from .subscription import CurrentSubscriptionEmbedded, SubscriptionHistoryEmbedd
 from .token import RefreshTokenEmbedded
 from .wallet import WalletEmbedded
 
+
 __all__ = [
     'NotificationsEmbedded',
     'CurrentSubscriptionEmbedded',

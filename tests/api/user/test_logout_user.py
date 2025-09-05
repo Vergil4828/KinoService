@@ -1,12 +1,19 @@
 from backend.core.redis_client import get_redis_client, init_redis, close_redis
 import pytest
 
+from tests.api.user.user_client import UserClient
+from tests.api.wallet.wallet_client import WalletClient
+from tests.conftest import UserCreationFunction
+
 
 @pytest.mark.asyncio
 @pytest.mark.positive
 class TestLogoutUserPositive:
     async def test_logout_user_positive(
-        self, api_client_user, registered_user_in_db_per_function, api_client_wallet
+        self,
+        api_client_user: UserClient,
+        registered_user_in_db_per_function: UserCreationFunction,
+        api_client_wallet: WalletClient,
     ):
         user_data, response_data, accessToken = (
             await registered_user_in_db_per_function(None)

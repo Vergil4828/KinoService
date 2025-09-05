@@ -1,9 +1,8 @@
 from __future__ import annotations
-from datetime import datetime, timezone
-from typing import List, Optional, Dict, Any, Union, TYPE_CHECKING, ForwardRef
-from pydantic import Field, BaseModel, ConfigDict, field_validator
-from beanie import Document, PydanticObjectId
-from pymongo import IndexModel
+from datetime import datetime
+from typing import Optional, Dict, Any, Union
+from pydantic import BaseModel, ConfigDict, field_validator
+from beanie import PydanticObjectId
 
 from backend.schemas.subscription import SubscriptionPlanResponse
 

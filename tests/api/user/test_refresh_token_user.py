@@ -1,21 +1,30 @@
 from jose import jwt
 from backend.core.redis_client import get_redis_client, init_redis, close_redis
-import pytest, time, asyncio
+import pytest
+import time
+import asyncio
+
+from tests.api.user.user_client import UserClient
+from tests.conftest import UserCreationFunction, UserCleanFunction
 
 
 @pytest.mark.asyncio
 @pytest.mark.positive
 class TestRefreshTokenPositive:
     async def test_get_tokens_positive(
-        self, api_client_user, registered_user_in_db_per_function
+        self,
+        api_client_user: UserClient,
+        registered_user_in_db_per_function: UserCreationFunction,
     ):
-        user_data, response_data, accessToken = await registered_user_in_db_per_function(
-            {
-                "username": "new_tokens_user",
-                "email": "new_tokens@example.com",
-                "password": "Password123",
-                "confirmPassword": "Password123",
-            }
+        user_data, response_data, accessToken = (
+            await registered_user_in_db_per_function(
+                {
+                    "username": "new_tokens_user",
+                    "email": "new_tokens@example.com",
+                    "password": "Password123",
+                    "confirmPassword": "Password123",
+                }
+            )
         )
         refreshToken = response_data.json()["refreshToken"]
         await asyncio.sleep(1)
@@ -30,7 +39,9 @@ class TestRefreshTokenPositive:
 class TestRefreshTokenNegative:
 
     async def test_get_tokens_after_user_token_delete_in_redis(
-        self, api_client_user, registered_user_in_db_per_function
+        self,
+        api_client_user: UserClient,
+        registered_user_in_db_per_function: UserCreationFunction,
     ):
         user_data, response_data, _ = await registered_user_in_db_per_function(None)
         refreshToken = response_data.json()["refreshToken"]
@@ -45,7 +56,10 @@ class TestRefreshTokenNegative:
         assert response.json()["detail"] == "User token not in the Redis"
 
     async def test_get_tokens_after_user_delete_in_db(
-        self, api_client_user, registered_user_in_db_per_function, clean_user_now
+        self,
+        api_client_user: UserClient,
+        registered_user_in_db_per_function: UserCreationFunction,
+        clean_user_now: UserCleanFunction,
     ):
         user_data, response_data, _ = await registered_user_in_db_per_function(None)
         refreshToken = response_data.json()["refreshToken"]
@@ -55,7 +69,9 @@ class TestRefreshTokenNegative:
         assert response.json()["detail"] == "User token not in the Redis"
 
     async def test_get_tokens_with_expired_refresh_token(
-        self, api_client_user, registered_user_in_db_per_class
+        self,
+        api_client_user: UserClient,
+        registered_user_in_db_per_class: UserCreationFunction,
     ):
         user_data, response_data, _ = await registered_user_in_db_per_class(None)
         valid_token = response_data.json().copy()["refreshToken"]
@@ -79,13 +95,15 @@ class TestRefreshTokenNegative:
         assert response.status_code == 401
         assert response.json()["detail"] == "Token expired"
 
-    async def test_get_tokens_with_not_refresh_token(self, api_client_user):
+    async def test_get_tokens_with_not_refresh_token(self, api_client_user: UserClient):
         response = await api_client_user.get_new_tokens("")
         assert response.status_code == 401
         assert response.json()["detail"] == "Invalid refresh token"
 
     async def test_get_tokens_with_invalid_refresh_token(
-        self, api_client_user, registered_user_in_db_per_class
+        self,
+        api_client_user: UserClient,
+        registered_user_in_db_per_class: UserCreationFunction,
     ):
         user_data, response_data, _ = await registered_user_in_db_per_class(None)
         refreshToken = response_data.json()["refreshToken"] + "XXX"

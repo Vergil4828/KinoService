@@ -1,7 +1,7 @@
 from __future__ import annotations
 from datetime import datetime, timezone
-from typing import List, Optional, Dict, Any, Union
-from pydantic import Field, BaseModel, ConfigDict, field_validator
+from typing import List, Optional
+from pydantic import Field
 from beanie import Document, PydanticObjectId
 from pymongo import IndexModel
 
@@ -28,13 +28,11 @@ class SubscriptionPlan(Document):
         self.updatedAt = datetime.now(timezone.utc)
 
 
-
-
 class SubscriptionHistory(Document):
     userId: PydanticObjectId
     planId: PydanticObjectId
     startDate: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    endDate: Optional[datetime] = None  
+    endDate: Optional[datetime] = None
     isActive: bool = True
     autoRenew: bool = True
     changedByAdmin: bool = False
@@ -54,4 +52,3 @@ class SubscriptionHistory(Document):
         if not self.createdAt:
             self.createdAt = datetime.now(timezone.utc)
         self.updatedAt = datetime.now(timezone.utc)
-

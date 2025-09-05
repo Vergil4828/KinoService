@@ -2,7 +2,6 @@ import os
 import logging
 from dotenv import load_dotenv
 from pathlib import Path
-from datetime import timedelta
 from urllib.parse import urlparse
 
 logging.basicConfig(level=logging.INFO)

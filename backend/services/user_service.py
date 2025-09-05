@@ -1,16 +1,12 @@
 import asyncio
 import json
-import logging
 import os
-import shutil
 import uuid
 import aiofiles
 import aiofiles.os
-import re
 from datetime import datetime, timezone
 import bcrypt
 from backend.core.config import (
-    logger,
     PUBLIC_DIR,
     AVATAR_UPLOAD_DIR,
     REFRESH_SECRET_KEY,
@@ -142,7 +138,7 @@ class UserService:
 
             return response_data
 
-        except DuplicateKeyError as e:
+        except DuplicateKeyError:
             logger.warning(
                 f"Попытка создания пользователя с существующим email: {request_data.email}"
             )
@@ -375,7 +371,7 @@ class UserService:
                 "user": final_user_response_dict,
             }
 
-        except DuplicateKeyError as e:
+        except DuplicateKeyError:
             logger.warning(
                 f"Попытка обновления пользователя с существующим email: {request_data.email}"
             )
@@ -571,7 +567,8 @@ class UserService:
                         )
                     except Exception as delete_err:
                         logger.error(
-                            f"Ошибка при удалении старого аватара {old_avatar_full_path}: {delete_err}",
+                            f"Ошибка при удалении старого \
+                            аватара {old_avatar_full_path}: {delete_err}",
                             exc_info=True,
                         )
 

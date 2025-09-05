@@ -1,13 +1,10 @@
 from __future__ import annotations
-from datetime import datetime, timezone
-from typing import List, Optional, Dict, Any, Union
-from pydantic import Field, BaseModel, ConfigDict, field_validator
-from beanie import Document, PydanticObjectId
-from pymongo import IndexModel
+from datetime import datetime
+from typing import List, Optional
+from pydantic import Field, BaseModel, ConfigDict
+from beanie import PydanticObjectId
 
 from .transaction import TransactionResponse
-
-
 
 
 class SubscriptionPlanResponse(BaseModel):
@@ -30,18 +27,18 @@ class SubscriptionPlanResponse(BaseModel):
                 "renewalPeriod": 30,
                 "features": ["4K", "Без рекламы"],
                 "createdAt": "2023-01-01T00:00:00Z",
-                "updatedAt": "2023-01-02T00:00:00Z"
+                "updatedAt": "2023-01-02T00:00:00Z",
             }
-        }
+        },
     )
-    
-    
+
+
 class SubscriptionHistoryResponse(BaseModel):
     id: str = Field(alias="_id")
     userId: PydanticObjectId
     planId: PydanticObjectId
     startDate: datetime
-    endDate: Optional[datetime] = None  
+    endDate: Optional[datetime] = None
     isActive: bool
     autoRenew: bool
     changedByAdmin: bool
@@ -52,7 +49,7 @@ class SubscriptionHistoryResponse(BaseModel):
 
     model_config = ConfigDict(
         populate_by_name=True,
-        json_encoders={datetime: lambda v: v.isoformat() if v else None}
+        json_encoders={datetime: lambda v: v.isoformat() if v else None},
     )
 
 
@@ -70,5 +67,5 @@ class PurchaseSubscriptionResponse(BaseModel):
 
     model_config = ConfigDict(
         json_encoders={object: str, datetime: lambda v: v.isoformat()},
-        populate_by_name=True 
+        populate_by_name=True,
     )

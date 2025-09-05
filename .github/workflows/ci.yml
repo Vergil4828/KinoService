@@ -1,0 +1,100 @@
+name: CI with Docker
+
+on:
+  push:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      PORT: 3005
+      MONGO_URI: mongodb://db:27017/8_films
+      MONGO_DB_NAME: 8_films
+      REDIS_URL: redis://redis:6379
+      BCRYPT_ROUNDS: 4
+      JWT_SECRET: ${{ secrets.JWT_SECRET }}
+      REFRESH_SECRET: ${{ secrets.REFRESH_SECRET }}
+      CLIENT_URL: ${{ secrets.CLIENT_URL }}
+      STATIC_FILES_DIR: ${{ secrets.STATIC_FILES_DIR }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Install docker-compose
+        run: |
+          curl -L https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m) -o docker-compose
+          chmod +x docker-compose
+          sudo mv docker-compose /usr/local/bin
+
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.12"
+          
+      - name: Cache Python dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt --cache-dir ~/.cache/pip
+
+      - name: Build and run services
+        run: |
+          docker-compose -f docker-compose.yaml up --build -d
+
+      - name: Wait for MongoDB service to be healthy
+        run: |
+          echo "Waiting for db service to become healthy..."
+          RETRIES=30
+          until [ $(docker inspect --format='{{.State.Health.Status}}' $(docker-compose -f docker-compose.yaml ps -q db)) == 'healthy' ] || [ $RETRIES -eq 0 ]; do
+            echo -n "."
+            sleep 5
+            RETRIES=$(($RETRIES-1))
+          done
+          if [ $RETRIES -eq 0 ]; then
+            echo "Database service failed to become healthy."
+            exit 1
+          fi
+          echo "Database is healthy."
+
+      - name: Create allure-results directory on host
+        run: |
+          mkdir -p allure-results
+      
+      - name: Run tests
+        run: |
+          docker-compose -f docker-compose.yaml exec -T app pytest --alluredir=/app/allure-results tests
+
+      - name: Copy Allure results from container
+        run: |
+          docker cp $(docker-compose -f docker-compose.yaml ps -q app):/app/allure-results ./allure-results
+          
+      - name: Generate Allure Report
+        uses: simple-elf/allure-report-action@master
+        if: always()
+        with:
+          allure_results: allure-results
+          allure_report: allure-report
+          gh_pages: gh-pages
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        if: always()
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: allure-report
+          
+      - name: Upload Allure results as artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: allure-results
+          path: allure-results/

@@ -1,5 +1,8 @@
-import pytest, uuid
+import pytest
+import uuid
 from backend.core.redis_client import get_redis_client, init_redis, close_redis
+from tests.api.user.user_client import UserClient
+from tests.conftest import UserCreationFunction, UserCleanFunction
 from tests.data.API_User.user_test_data import UpdateUserData
 
 
@@ -8,7 +11,9 @@ from tests.data.API_User.user_test_data import UpdateUserData
 class TestUpdateUserPositive:
 
     async def test_update_user_positive(
-        self, api_client_user, registered_user_in_db_per_function
+        self,
+        api_client_user: UserClient,
+        registered_user_in_db_per_function: UserCreationFunction,
     ):
         update_user_data = UpdateUserData.base_user_update_data.copy()
         update_user_data["username"] = "update_user"
@@ -21,8 +26,12 @@ class TestUpdateUserPositive:
         assert response.json()["user"]["email"] == update_user_data["email"]
 
     async def test_update_user_delete_cache_user_data_after_update(
-        self, api_client_user, registered_user_in_db_per_function
+        self,
+        api_client_user: UserClient,
+        registered_user_in_db_per_function: UserCreationFunction,
     ):
+        user_data_before_update = None
+        user_data_after_update = None
         update_user_data = UpdateUserData.base_user_update_data.copy()
         update_user_data["username"] = "update_user"
         update_user_data["email"] = "update_email@example.com"
@@ -57,15 +66,17 @@ class TestUpdateUserValidValidation:
     )
     async def test_update_user_valid_username(
         self,
-        api_client_user,
-        registered_user_in_db_per_class,
-        username,
-        status_code,
-        ids,
+        api_client_user: UserClient,
+        registered_user_in_db_per_class: UserCreationFunction,
+        username: str,
+        status_code: int,
+        ids: str,
     ):
         status_code = 200
         update_user_data = UpdateUserData.base_user_update_data.copy()
-        user_data, response_data, accessToken = await registered_user_in_db_per_class(None)
+        user_data, response_data, accessToken = await registered_user_in_db_per_class(
+            None
+        )
         update_user_data["username"] = username
         update_user_data["email"] = user_data["email"]
         response = await api_client_user.update_user(accessToken, update_user_data)
@@ -78,11 +89,11 @@ class TestUpdateUserValidValidation:
     )
     async def test_update_user_valid_email(
         self,
-        api_client_user,
-        registered_user_in_db_per_class,
-        email,
-        status_code,
-        ids,
+        api_client_user: UserClient,
+        registered_user_in_db_per_class: UserCreationFunction,
+        email: str,
+        status_code: int,
+        ids: str,
     ):
         status_code = 200
         update_user_data = UpdateUserData.base_user_update_data.copy()
@@ -98,15 +109,17 @@ class TestUpdateUserValidValidation:
     )
     async def test_update_user_valid_new_password(
         self,
-        api_client_user,
-        registered_user_in_db_per_function,
-        new_password,
-        status_code,
-        ids,
+        api_client_user: UserClient,
+        registered_user_in_db_per_function: UserCreationFunction,
+        new_password: str,
+        status_code: int,
+        ids: str,
     ):
         status_code = 200
         update_user_data = UpdateUserData.base_user_update_data.copy()
-        user_data, response_data, accessToken = await registered_user_in_db_per_function(None)
+        user_data, response_data, accessToken = (
+            await registered_user_in_db_per_function(None)
+        )
         update_user_data["email"] = user_data["email"]
         update_user_data["newPassword"] = new_password
         response = await api_client_user.update_user(accessToken, update_user_data)
@@ -119,11 +132,11 @@ class TestUpdateUserValidValidation:
     )
     async def test_update_user_valid_current_password(
         self,
-        api_client_user,
-        registered_user_in_db_per_function,
-        current_password,
-        status_code,
-        ids,
+        api_client_user: UserClient,
+        registered_user_in_db_per_function: UserCreationFunction,
+        current_password: str,
+        status_code: int,
+        ids: str,
     ):
         status_code = 200
         update_user_data = UpdateUserData.base_user_update_data.copy()
@@ -152,14 +165,14 @@ class TestUpdateUserInvalidValidation:
     )
     async def test_update_user_invalid_username(
         self,
-        api_client_user,
-        registered_user_in_db_per_class,
-        username,
-        status_code,
-        ids,
+        api_client_user: UserClient,
+        registered_user_in_db_per_class: UserCreationFunction,
+        username: str,
+        status_code: int,
+        ids: str,
     ):
         update_user_data = UpdateUserData.base_user_update_data.copy()
-        user_data, response_data, accessToken = await registered_user_in_db_per_class(None)
+        user_data, response_data, accessToken = await registered_user_in_db_per_class()
         update_user_data["username"] = username
         update_user_data["email"] = user_data["email"]
         response = await api_client_user.update_user(accessToken, update_user_data)
@@ -172,11 +185,11 @@ class TestUpdateUserInvalidValidation:
     )
     async def test_update_user_invalid_email(
         self,
-        api_client_user,
-        registered_user_in_db_per_class,
-        email,
-        status_code,
-        ids,
+        api_client_user: UserClient,
+        registered_user_in_db_per_class: UserCreationFunction,
+        email: str,
+        status_code: int,
+        ids: str,
     ):
         update_user_data = UpdateUserData.base_user_update_data.copy()
         _, response_data, accessToken = await registered_user_in_db_per_class(None)
@@ -191,14 +204,16 @@ class TestUpdateUserInvalidValidation:
     )
     async def test_update_user_invalid_new_password(
         self,
-        api_client_user,
-        registered_user_in_db_per_class,
-        new_password,
-        status_code,
-        ids,
+        api_client_user: UserClient,
+        registered_user_in_db_per_class: UserCreationFunction,
+        new_password: str,
+        status_code: int,
+        ids: str,
     ):
         update_user_data = UpdateUserData.base_user_update_data.copy()
-        user_data, response_data, accessToken = await registered_user_in_db_per_class(None)
+        user_data, response_data, accessToken = await registered_user_in_db_per_class(
+            None
+        )
         update_user_data["newPassword"] = new_password
         update_user_data["email"] = user_data["email"]
         response = await api_client_user.update_user(accessToken, update_user_data)
@@ -212,14 +227,16 @@ class TestUpdateUserInvalidValidation:
     )
     async def test_update_user_invalid_current_password(
         self,
-        api_client_user,
-        registered_user_in_db_per_class,
-        current_password,
-        status_code,
-        ids,
+        api_client_user: UserClient,
+        registered_user_in_db_per_class: UserCreationFunction,
+        current_password: str,
+        status_code: int,
+        ids: str,
     ):
         update_user_data = UpdateUserData.base_user_update_data.copy()
-        user_data, response_data, accessToken = await registered_user_in_db_per_class(None)
+        user_data, response_data, accessToken = await registered_user_in_db_per_class(
+            None
+        )
         update_user_data["currentPassword"] = current_password
         update_user_data["email"] = user_data["email"]
         response = await api_client_user.update_user(accessToken, update_user_data)
@@ -231,9 +248,14 @@ class TestUpdateUserInvalidValidation:
 class TestUpdateUserNegative:
 
     async def test_update_user_after_user_delete_in_db(
-        self, api_client_user, registered_user_in_db_per_function, clean_user_now
+        self,
+        api_client_user: UserClient,
+        registered_user_in_db_per_function: UserCreationFunction,
+        clean_user_now: UserCleanFunction,
     ):
-        user_data, response_data, accessToken = await registered_user_in_db_per_function(None)
+        user_data, response_data, accessToken = (
+            await registered_user_in_db_per_function(None)
+        )
         update_user_data = UpdateUserData.base_user_update_data.copy()
         update_user_data["email"] = user_data["email"]
         await clean_user_now(response_data.json()["user"]["id"])
@@ -242,9 +264,13 @@ class TestUpdateUserNegative:
         assert response.json()["detail"] == "User not found"
 
     async def test_update_user_with_wrong_password(
-        self, api_client_user, registered_user_in_db_per_function
+        self,
+        api_client_user: UserClient,
+        registered_user_in_db_per_function: UserCreationFunction,
     ):
-        user_data, response_data, accessToken = await registered_user_in_db_per_function(None)
+        user_data, response_data, accessToken = (
+            await registered_user_in_db_per_function(None)
+        )
         update_user_data = UpdateUserData.base_user_update_data.copy()
         update_user_data["currentPassword"] = "Password1234"
         update_user_data["email"] = user_data["email"]
@@ -252,9 +278,13 @@ class TestUpdateUserNegative:
         assert response.status_code == 400
 
     async def test_update_user_missing_required_field(
-        self, api_client_user, registered_user_in_db_per_function
+        self,
+        api_client_user: UserClient,
+        registered_user_in_db_per_function: UserCreationFunction,
     ):
-        user_data, response_data, accessToken = await registered_user_in_db_per_function(None)
+        user_data, response_data, accessToken = (
+            await registered_user_in_db_per_function(None)
+        )
         update_user_data = UpdateUserData.base_user_update_data.copy()
         update_user_data["email"] = user_data["email"]
         del update_user_data["currentPassword"]
@@ -263,9 +293,14 @@ class TestUpdateUserNegative:
         assert response.json()["detail"][0]["msg"] == "Field required"
 
     async def test_login_user_with_duplicate_field(
-        self, api_client_user, clean_user_now, registered_user_in_db_per_function
+        self,
+        api_client_user: UserClient,
+        clean_user_now: UserCleanFunction,
+        registered_user_in_db_per_function: UserCreationFunction,
     ):
-        user_data, response_data, accessToken = await registered_user_in_db_per_function(None)
+        user_data, response_data, accessToken = (
+            await registered_user_in_db_per_function(None)
+        )
         update_user_data = {
             "username": "new_user",
             "email": "user@example.com",

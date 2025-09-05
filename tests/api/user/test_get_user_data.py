@@ -1,8 +1,11 @@
-from jose import jwt
+import pytest
 
-import pytest, time
-
-from tests.API.conftest import clean_cache_redis
+from tests.api.user.user_client import UserClient
+from tests.conftest import (
+    clean_cache_redis,
+    UserCreationFunction,
+    UserCleanFunction,
+)
 
 
 @pytest.mark.asyncio
@@ -10,7 +13,9 @@ from tests.API.conftest import clean_cache_redis
 class TestGetUserDataPositive:
 
     async def test_get_user_data_valid_access_token(
-        self, api_client_user, registered_user_in_db_per_function
+        self,
+        api_client_user: UserClient,
+        registered_user_in_db_per_function: UserCreationFunction,
     ):
         user_data, response_data, accessToken = (
             await registered_user_in_db_per_function(None)
@@ -27,7 +32,10 @@ class TestGetUserDataPositive:
 @pytest.mark.negative
 class TestGetUserDataNegative:
     async def test_get_user_data_after_user_delete_in_db(
-        self, api_client_user, registered_user_in_db_per_function, clean_user_now
+        self,
+        api_client_user: UserClient,
+        registered_user_in_db_per_function: UserCreationFunction,
+        clean_user_now: UserCleanFunction,
     ):
         user_data, response_data, accessToken = (
             await registered_user_in_db_per_function(None)
