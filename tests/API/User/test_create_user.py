@@ -1,6 +1,9 @@
+from typing import AsyncGenerator
 import pytest
 import uuid
 import copy
+from tests.conftest import clean_user_now, UserCreationFunction, UserCleanFunction
+from tests.API.User.user_client import UserClient
 from tests.data.API_User.user_test_data import CreateUserData
 
 
@@ -15,14 +18,14 @@ class TestCreateUserPositive:
     )
     async def test_create_user(
         self,
-        api_client_user,
-        clean_user_now,
-        username,
-        email,
-        password,
-        confirmPassword,
-        notification_bool,
-        ids,
+        api_client_user: UserClient,
+        clean_user_now: UserCleanFunction,
+        username: str,
+        email: str,
+        password: str,
+        confirmPassword: str,
+        notification_bool: bool,
+        ids: str,
     ):
         user_data = {
             "username": username,
@@ -53,7 +56,12 @@ class TestCreateUserValidValidation:
         ids=[data[2] for data in CreateUserData.test_data_valid_username],
     )
     async def test_create_user_valid_username(
-        self, api_client_user, username, status_code, ids, clean_user_now
+        self,
+        api_client_user: UserClient,
+        username: str,
+        status_code: int,
+        ids: str,
+        clean_user_now: UserCleanFunction,
     ):
         user_data = CreateUserData.base_user_data.copy()
         user_data["email"] = f"user-{uuid.uuid4()}@example.com"
@@ -68,7 +76,12 @@ class TestCreateUserValidValidation:
         ids=[data[2] for data in CreateUserData.test_data_valid_email],
     )
     async def test_create_user_valid_email(
-        self, api_client_user, email, status_code, ids, clean_user_now
+        self,
+        api_client_user: UserClient,
+        email: str,
+        status_code: int,
+        ids: str,
+        clean_user_now: UserCleanFunction,
     ):
         user_data = CreateUserData.base_user_data.copy()
         user_data["email"] = email
@@ -82,7 +95,12 @@ class TestCreateUserValidValidation:
         ids=[data[2] for data in CreateUserData.test_data_valid_password],
     )
     async def test_create_user_valid_passwords(
-        self, api_client_user, password, status_code, ids, clean_user_now
+        self,
+        api_client_user: UserClient,
+        password: str,
+        status_code: int,
+        ids: str,
+        clean_user_now: UserCleanFunction,
     ):
         user_data = CreateUserData.base_user_data.copy()
         user_data["email"] = f"user-{uuid.uuid4()}@example.com"
@@ -104,7 +122,7 @@ class TestCreateUserInvalidValidation:
         ids=[data[2] for data in CreateUserData.test_data_invalid_username],
     )
     async def test_create_user_invalid_username(
-        self, api_client_user, username, status_code, ids
+        self, api_client_user: UserClient, username: str, status_code: int, ids: str
     ):
         user_data = CreateUserData.base_user_data.copy()
         user_data["email"] = f"user-{uuid.uuid4()}@example.com"
@@ -118,7 +136,7 @@ class TestCreateUserInvalidValidation:
         ids=[data[2] for data in CreateUserData.test_data_invalid_email],
     )
     async def test_create_user_invalid_email(
-        self, api_client_user, email, status_code, ids
+        self, api_client_user: UserClient, email: str, status_code: int, ids: str
     ):
         user_data = CreateUserData.base_user_data.copy()
         user_data["email"] = email
@@ -132,11 +150,11 @@ class TestCreateUserInvalidValidation:
     )
     async def test_create_user_invalid_passwords(
         self,
-        api_client_user,
-        password,
-        confirmPassword,
-        status_code,
-        ids,
+        api_client_user: UserClient,
+        password: str,
+        confirmPassword: str,
+        status_code: int,
+        ids: str,
     ):
         user_data = CreateUserData.base_user_data.copy()
         user_data["email"] = f"user-{uuid.uuid4()}@example.com"
@@ -151,7 +169,12 @@ class TestCreateUserInvalidValidation:
         CreateUserData.test_data_invalid_notifications,
     )
     async def test_create_user_invalid_notifications_fields(
-        self, api_client_user, field_notifications, value, status_code, ids
+        self,
+        api_client_user: UserClient,
+        field_notifications: str,
+        value: bool,
+        status_code: int,
+        ids: str,
     ):  # Используем глубокое копирование, так как изменяются вложенные данные
         user_data = copy.deepcopy(CreateUserData.base_user_data)
         user_data["email"] = f"user-{uuid.uuid4()}@example.com"
@@ -166,8 +189,8 @@ class TestCreateUserNegative:
 
     async def test_create_user_without_basic_plan(
         self,
-        api_client_user,
-        prepare_db_and_redis_without_basic_plan,
+        api_client_user: UserClient,
+        prepare_db_and_redis_without_basic_plan: AsyncGenerator[None, None],
     ):
         user_data = CreateUserData.base_user_data.copy()
         user_data["email"] = f"user-{uuid.uuid4()}@example.com"
@@ -176,7 +199,9 @@ class TestCreateUserNegative:
         assert response.json()["detail"] == "Ошибка сервера при создании пользователя"
 
     async def test_create_user_with_exist_email_in_database(
-        self, api_client_user, registered_user_in_db_per_function
+        self,
+        api_client_user: UserClient,
+        registered_user_in_db_per_function: UserCreationFunction,
     ):
 
         user_data, _, _ = await registered_user_in_db_per_function(None)
@@ -195,7 +220,11 @@ class TestCreateUserNegative:
         ],
     )
     async def test_create_user_missing_required_field(
-        self, api_client_user, field_to_remove, status_code, clean_user_now
+        self,
+        api_client_user: UserClient,
+        field_to_remove: str,
+        status_code: int,
+        clean_user_now: UserCleanFunction,
     ):
         user_data_without_field = CreateUserData.base_user_data.copy()
         user_data_without_field["email"] = f"user-{uuid.uuid4()}@example.com"
@@ -206,7 +235,9 @@ class TestCreateUserNegative:
             await clean_user_now(response.json()["user"]["id"])
 
     async def test_create_user_with_duplicate_field(
-        self, api_client_user, clean_user_now
+        self,
+        api_client_user: UserClient,
+        clean_user_now: UserCleanFunction,
     ):
         user_data = {
             "username": "new_user",

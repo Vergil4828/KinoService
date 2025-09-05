@@ -1,6 +1,6 @@
 from __future__ import annotations
-from datetime import datetime, timedelta, timezone
-from typing import List, Optional, Dict, Any, Union, TYPE_CHECKING, ForwardRef
+from datetime import datetime
+from typing import List, Optional
 from pydantic import (
     Field,
     BaseModel,
@@ -10,10 +10,7 @@ from pydantic import (
     ValidationInfo,
 )
 
-from beanie import Document, PydanticObjectId, Link
-from pymongo import IndexModel
-from pathlib import Path
-import pytz, re
+import re
 
 
 class UserResponseBase(BaseModel):
@@ -60,19 +57,24 @@ class CreateUserRequest(BaseModel):
         - дефис (-)
         - подчеркивание (_)
         """
-        if not re.match(r'^[a-zA-Z0-9_-]+$', v):
+        if not re.match(r"^[a-zA-Z0-9_-]+$", v):
             raise ValueError(
-                "Username может содержать только латинские буквы, цифры, дефис (-) и подчеркивание (_)"
+                "Username может содержать только латинские буквы, цифры, \
+                дефис (-) и подчеркивание (_)"
             )
 
-        if v.startswith('-') or v.endswith('-'):
+        if v.startswith("-") or v.endswith("-"):
             raise ValueError("Username не может начинаться или заканчиваться дефисом")
 
-        if v.startswith('_') or v.endswith('_'):
-            raise ValueError("Username не может начинаться или заканчиваться подчеркиванием")
+        if v.startswith("_") or v.endswith("_"):
+            raise ValueError(
+                "Username не может начинаться или заканчиваться подчеркиванием"
+            )
 
-        if '--' in v or '__' in v or '-_' in v or '_-' in v:
-            raise ValueError("Username не может содержать последовательные специальные символы")
+        if "--" in v or "__" in v or "-_" in v or "_-" in v:
+            raise ValueError(
+                "Username не может содержать последовательные специальные символы"
+            )
 
         return v
 
@@ -81,17 +83,19 @@ class CreateUserRequest(BaseModel):
     def validate_email_additional(cls, v: EmailStr) -> EmailStr:
 
         email_str = str(v)
-        local_part = email_str.split('@')[0]
-        if local_part.startswith('.') or local_part.endswith('.'):
-            raise ValueError("Email не может начинаться или заканчиваться точкой в локальной части")
+        local_part = email_str.split("@")[0]
+        if local_part.startswith(".") or local_part.endswith("."):
+            raise ValueError(
+                "Email не может начинаться или заканчиваться точкой в локальной части"
+            )
 
-        if '..' in local_part:
+        if ".." in local_part:
             raise ValueError("Email не может содержать последовательные точки")
 
         if len(local_part) > 64:
             raise ValueError("Локальная часть email не может превышать 64 символа")
 
-        domain = email_str.split('@')[1]
+        domain = email_str.split("@")[1]
         if len(domain) > 255:
             raise ValueError("Доменная часть email не может превышать 255 символов")
 
@@ -120,22 +124,25 @@ class LoginUserRequest(BaseModel):
     @classmethod
     def validate_email_additional(cls, v: EmailStr) -> EmailStr:
         email_str = str(v)
-        local_part = email_str.split('@')[0]
+        local_part = email_str.split("@")[0]
 
-        if local_part.startswith('.') or local_part.endswith('.'):
-            raise ValueError("Email не может начинаться или заканчиваться точкой в локальной части")
+        if local_part.startswith(".") or local_part.endswith("."):
+            raise ValueError(
+                "Email не может начинаться или заканчиваться точкой в локальной части"
+            )
 
-        if '..' in local_part:
+        if ".." in local_part:
             raise ValueError("Email не может содержать последовательные точки")
 
         if len(local_part) > 64:
             raise ValueError("Локальная часть email не может превышать 64 символа")
 
-        domain = email_str.split('@')[1]
+        domain = email_str.split("@")[1]
         if len(domain) > 255:
             raise ValueError("Доменная часть email не может превышать 63 символов")
 
         return v
+
 
 class UpdateUserRequest(BaseModel):
     username: Optional[str] = Field(None, min_length=1, max_length=50)
@@ -162,19 +169,24 @@ class UpdateUserRequest(BaseModel):
         """
         if v is None:
             return v
-        if not re.match(r'^[a-zA-Z0-9_-]+$', v):
+        if not re.match(r"^[a-zA-Z0-9_-]+$", v):
             raise ValueError(
-                "Username может содержать только латинские буквы, цифры, дефис (-) и подчеркивание (_)"
+                "Username может содержать только латинские буквы, цифры, \
+                дефис (-) и подчеркивание (_)"
             )
 
-        if v.startswith('-') or v.endswith('-'):
+        if v.startswith("-") or v.endswith("-"):
             raise ValueError("Username не может начинаться или заканчиваться дефисом")
 
-        if v.startswith('_') or v.endswith('_'):
-            raise ValueError("Username не может начинаться или заканчиваться подчеркиванием")
+        if v.startswith("_") or v.endswith("_"):
+            raise ValueError(
+                "Username не может начинаться или заканчиваться подчеркиванием"
+            )
 
-        if '--' in v or '__' in v or '-_' in v or '_-' in v:
-            raise ValueError("Username не может содержать последовательные специальные символы")
+        if "--" in v or "__" in v or "-_" in v or "_-" in v:
+            raise ValueError(
+                "Username не может содержать последовательные специальные символы"
+            )
         return v
 
     @field_validator("email", mode="after")
@@ -182,17 +194,19 @@ class UpdateUserRequest(BaseModel):
     def validate_email_additional(cls, v: EmailStr) -> EmailStr:
 
         email_str = str(v)
-        local_part = email_str.split('@')[0]
-        if local_part.startswith('.') or local_part.endswith('.'):
-            raise ValueError("Email не может начинаться или заканчиваться точкой в локальной части")
+        local_part = email_str.split("@")[0]
+        if local_part.startswith(".") or local_part.endswith("."):
+            raise ValueError(
+                "Email не может начинаться или заканчиваться точкой в локальной части"
+            )
 
-        if '..' in local_part:
+        if ".." in local_part:
             raise ValueError("Email не может содержать последовательные точки")
 
         if len(local_part) > 64:
             raise ValueError("Локальная часть email не может превышать 64 символа")
 
-        domain = email_str.split('@')[1]
+        domain = email_str.split("@")[1]
         if len(domain) > 255:
             raise ValueError("Доменная часть email не может превышать 63 символа")
 

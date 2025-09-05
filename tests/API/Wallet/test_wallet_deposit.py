@@ -1,5 +1,8 @@
 import pytest
 import asyncio
+
+from tests.API.Wallet.wallet_client import WalletClient
+from tests.conftest import UserCreationFunction, UserCleanFunction
 from tests.data.API_Wallet.wallet_test_data import WalletDepositData
 
 
@@ -7,7 +10,9 @@ from tests.data.API_Wallet.wallet_test_data import WalletDepositData
 @pytest.mark.positive
 class TestWalletDepositPositive:
     async def test_wallet_deposit_positive(
-        self, api_client_wallet, registered_user_in_db_per_function
+        self,
+        api_client_wallet: WalletClient,
+        registered_user_in_db_per_function: UserCreationFunction,
     ):
         _, response_data, accessToken = await registered_user_in_db_per_function(None)
         response = await api_client_wallet.wallet_deposit(accessToken, 10.00)
@@ -16,7 +21,9 @@ class TestWalletDepositPositive:
         assert response_wallet.json()["balance"] == 10.00
 
     async def test_wallet_deposit_race_condition(
-        self, api_client_wallet, registered_user_in_db_per_function
+        self,
+        api_client_wallet: WalletClient,
+        registered_user_in_db_per_function: UserCreationFunction,
     ):
         _, response_data, accessToken = await registered_user_in_db_per_function(None)
         balance_user = response_data.json()["user"]["wallet"]["balance"]
@@ -39,7 +46,11 @@ class TestWalletDepositInvalidValidation:
 
     @pytest.mark.parametrize("amount, status_code", WalletDepositData.invalid_amount)
     async def test_wallet_deposit_invalid_amount(
-        self, api_client_wallet, registered_user_in_db_per_class, amount, status_code
+        self,
+        api_client_wallet: WalletClient,
+        registered_user_in_db_per_class: UserCreationFunction,
+        amount: float,
+        status_code: int,
     ):
         _, response_data, accessToken = await registered_user_in_db_per_class(None)
         response = await api_client_wallet.wallet_deposit(accessToken, amount)
@@ -50,7 +61,10 @@ class TestWalletDepositInvalidValidation:
 @pytest.mark.negative
 class TestWalletDepositNegative:
     async def test_wallet_deposit_after_user_delete_in_db(
-        self, clean_user_now, api_client_wallet, registered_user_in_db_per_function
+        self,
+        api_client_wallet: WalletClient,
+        clean_user_now: UserCleanFunction,
+        registered_user_in_db_per_function: UserCreationFunction,
     ):
         user_data, response_data, accessToken = (
             await registered_user_in_db_per_function(None)

@@ -1,4 +1,8 @@
-import pytest, uuid
+import pytest
+import uuid
+
+from tests.API.User.user_client import UserClient
+from tests.conftest import UserCreationFunction
 from tests.data.API_User.user_test_data import LoginUserData
 
 
@@ -12,12 +16,12 @@ class TestLoginUserPositive:
     )
     async def test_login_user(
         self,
-        api_client_user,
-        email,
-        password,
-        status_code,
-        ids,
-        registered_user_in_db_per_function,
+        api_client_user: UserClient,
+        email: str,
+        password: str,
+        status_code: int,
+        ids: str,
+        registered_user_in_db_per_function: UserCreationFunction,
     ):
         await registered_user_in_db_per_function(
             {
@@ -45,11 +49,11 @@ class TestLoginUserValidValidation:
     )
     async def test_login_user_valid_email(
         self,
-        api_client_user,
-        registered_user_in_db_per_function,
-        email,
-        status_code,
-        ids,
+        api_client_user: UserClient,
+        registered_user_in_db_per_function: UserCreationFunction,
+        email: str,
+        status_code: int,
+        ids: str,
     ):
         status_code = 200
         await registered_user_in_db_per_function(
@@ -71,11 +75,11 @@ class TestLoginUserValidValidation:
     )
     async def test_login_user_valid_password(
         self,
-        api_client_user,
-        registered_user_in_db_per_function,
-        password,
-        status_code,
-        ids,
+        api_client_user: UserClient,
+        registered_user_in_db_per_function: UserCreationFunction,
+        password: str,
+        status_code: int,
+        ids: str,
     ):
         email = f"user-{uuid.uuid4()}@example.com"
         await registered_user_in_db_per_function(
@@ -101,7 +105,7 @@ class TestLoginUserInvalidValidation:
         ids=[data[2] for data in LoginUserData.test_data_invalid_email],
     )
     async def test_login_user_invalid_email(
-        self, api_client_user, email, status_code, ids
+        self, api_client_user: UserClient, email: str, status_code: int, ids: str
     ):
         credential = LoginUserData.base_credential.copy()
         credential["email"] = email
@@ -114,7 +118,7 @@ class TestLoginUserInvalidValidation:
         ids=[data[2] for data in LoginUserData.test_data_invalid_password],
     )
     async def test_login_user_invalid_password(
-        self, api_client_user, password, status_code, ids
+        self, api_client_user: UserClient, password: str, status_code: int, ids: str
     ):
         credential = LoginUserData.base_credential.copy()
         credential["email"] = f"user-{uuid.uuid4()}@example.com"
@@ -127,7 +131,9 @@ class TestLoginUserInvalidValidation:
 @pytest.mark.negative
 class TestLoginUserNegative:
 
-    async def test_login_user_with_not_exists_email_in_database(self, api_client_user):
+    async def test_login_user_with_not_exists_email_in_database(
+        self, api_client_user: UserClient
+    ):
         response = await api_client_user.login_user(
             LoginUserData.base_credential.copy()
         )
@@ -135,7 +141,9 @@ class TestLoginUserNegative:
         assert response.json()["detail"] == "Invalid email or password"
 
     async def test_login_user_with_wrong_password_for_email_in_db(
-        self, api_client_user, registered_user_in_db_per_function
+        self,
+        api_client_user: UserClient,
+        registered_user_in_db_per_function: UserCreationFunction,
     ):
         credential = LoginUserData.base_credential.copy()
         await registered_user_in_db_per_function(
@@ -155,7 +163,7 @@ class TestLoginUserNegative:
         "field_to_remove, status_code", [("email", 422), ("password", 422)]
     )
     async def test_login_user_missing_required_field(
-        self, api_client_user, field_to_remove, status_code
+        self, api_client_user: UserClient, field_to_remove: str, status_code: int
     ):
         credential = LoginUserData.base_credential.copy()
         del credential[field_to_remove]
@@ -164,7 +172,9 @@ class TestLoginUserNegative:
         assert response.json()["detail"][0]["msg"] == "Field required"
 
     async def test_login_user_with_duplicate_field(
-        self, api_client_user, registered_user_in_db_per_function
+        self,
+        api_client_user: UserClient,
+        registered_user_in_db_per_function: UserCreationFunction,
     ):
         await registered_user_in_db_per_function(
             {

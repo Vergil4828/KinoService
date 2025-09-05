@@ -160,12 +160,6 @@ class WalletService:
                         transaction_dict["_id"] = str(transaction_dict["_id"])
                         transaction_dict["userId"] = str(transaction_dict["userId"])
 
-                        final_response_payload = {
-                            "success": True,
-                            "newBalance": updated_user.wallet.balance,
-                            "transaction": transaction_dict,
-                        }
-
                     except OperationFailure as e:
                         labels = set(getattr(e, "error_labels", []) or [])
                         message = str(e)
@@ -186,7 +180,8 @@ class WalletService:
                         if is_retryable and attempt < retries - 1:
 
                             logger.warning(
-                                f"Transient transaction error. Retrying... Attempt {attempt + 1}/{retries}: {message}"
+                                f"Transient transaction error. Retrying... \
+                                Attempt {attempt + 1}/{retries}: {message}"
                             )
                             try:
                                 await session.abort_transaction()
@@ -241,5 +236,6 @@ class WalletService:
             }
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Не удалось выполнить транзакцию из-за постоянных конфликтов записи. Пожалуйста, попробуйте еще раз позже.",
+            detail="Не удалось выполнить транзакцию из-за постоянных конфликтов записи. \
+            Пожалуйста, попробуйте еще раз позже.",
         )

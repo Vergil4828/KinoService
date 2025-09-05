@@ -5,7 +5,7 @@ from fastapi import (
     status,
     Request,
     Depends,
-)  # HTTPException и status для обработки ошибок, Request для доступа к заголовкам, Depends для внедрения зависимостей
+)
 from pymongo.errors import (
     DuplicateKeyError,
 )  # Для перехвата ошибки дублирования ключа при создании плана
@@ -296,7 +296,8 @@ class AdminPlanService:
                         "SubscriptionPlan",
                         planId,
                         None,
-                        f"Admin {admin_user.email} deleted subscription plan: {plan_to_delete.name}",
+                        f"Admin {admin_user.email} deleted \
+                        subscription plan: {plan_to_delete.name}",
                     )
 
                     await session.commit_transaction()

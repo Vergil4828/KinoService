@@ -1,4 +1,5 @@
 class CreateUserData:
+    # ПЕРЕПИСАТЬ С РАНДОМОМ
     base_user_data = {
         "username": "new_user",
         "email": "user@example.com",
@@ -226,7 +227,7 @@ class UpdateUserData:
     base_user_update_data = {
         "username": "new_user",
         "email": "user@example.com",
-        "newPassword": "Password123",  # Если пользователь не изменяет пароль, то это поле не добавляется в запрос
+        "newPassword": "Password123",
         "currentPassword": "Password123",
     }
 

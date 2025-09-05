@@ -200,8 +200,6 @@ class AdminUserService:
                     user = await User.get(userId, session=session)
                     if not user:
                         raise HTTPException(status_code=404, detail="User not found")
-
-                    old_data = user.model_dump(by_alias=True)
                     update_fields = {}
                     changes = {}
 
@@ -303,7 +301,8 @@ class AdminUserService:
                                     ValueError,
                                 ) as e:
                                     logger.error(
-                                        f"Invalid planId format or plan not found: {sub_data['planId']} - {e}",
+                                        f"Invalid planId format or plan not \
+                                        found: {sub_data['planId']} - {e}",
                                         exc_info=True,
                                     )
                                     raise HTTPException(
