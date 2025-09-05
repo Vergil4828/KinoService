@@ -1,0 +1,8 @@
+INFO:httpx:HTTP Request: GET http://localhost:3005/api/user/data "HTTP/1.1 200 OK"
+INFO:backend.core.config:Успешное подключение к Redis
+INFO:httpx:HTTP Request: POST http://localhost:3005/api/user/avatar "HTTP/1.1 200 OK"
+INFO:backend.core.config:Соединение с Redis закрыто
+INFO:backend.core.config:Успешное подключение к Redis
+INFO:backend.core.config:Соединение с Redis закрыто
+INFO:backend.core.config:Успешное подключение к Redis
+INFO:backend.core.config:Соединение с Redis закрыто

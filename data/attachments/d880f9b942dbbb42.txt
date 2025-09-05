@@ -1,0 +1,11 @@
+INFO:httpx:HTTP Request: POST http://localhost:3005/api/create/user "HTTP/1.1 201 Created"
+INFO:httpx:HTTP Request: POST http://localhost:3005/api/wallet/deposit "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://localhost:3005/api/wallet/deposit "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://localhost:3005/api/wallet/deposit "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://localhost:3005/api/wallet/deposit "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: POST http://localhost:3005/api/wallet/deposit "HTTP/1.1 200 OK"
+INFO:httpx:HTTP Request: GET http://localhost:3005/api/wallet "HTTP/1.1 200 OK"
+INFO:backend.core.config:Успешное подключение к Redis
+INFO:backend.core.config:Соединение с Redis закрыто
+INFO:backend.core.config:Успешное подключение к Redis
+INFO:backend.core.config:Соединение с Redis закрыто

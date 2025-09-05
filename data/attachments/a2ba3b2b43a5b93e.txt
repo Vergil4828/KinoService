@@ -1,0 +1,5 @@
+INFO:httpx:HTTP Request: POST http://localhost:3005/api/refresh-token "HTTP/1.1 401 Unauthorized"
+INFO:backend.core.config:Успешное подключение к Redis
+INFO:backend.core.config:Соединение с Redis закрыто
+INFO:backend.core.config:Успешное подключение к Redis
+INFO:backend.core.config:Соединение с Redis закрыто

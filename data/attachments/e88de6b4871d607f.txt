@@ -1,0 +1,2 @@
+INFO:httpx:HTTP Request: POST http://localhost:3005/api/create/user "HTTP/1.1 201 Created"
+INFO:httpx:HTTP Request: POST http://localhost:3005/api/user/avatar "HTTP/1.1 200 OK"

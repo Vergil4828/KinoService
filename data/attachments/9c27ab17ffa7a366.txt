@@ -1,0 +1,3 @@
+INFO     backend.core.config:redis_client.py:13 Успешное подключение к Redis
+INFO     httpx:_client.py:1740 HTTP Request: POST http://localhost:3005/api/create/user "HTTP/1.1 500 Internal Server Error"
+INFO     backend.core.config:redis_client.py:22 Соединение с Redis закрыто

@@ -1,0 +1,6 @@
+INFO     httpx:_client.py:1740 HTTP Request: POST http://localhost:3005/api/create/user "HTTP/1.1 201 Created"
+INFO     httpx:_client.py:1740 HTTP Request: POST http://localhost:3005/api/refresh-token "HTTP/1.1 200 OK"
+INFO     backend.core.config:redis_client.py:13 Успешное подключение к Redis
+INFO     backend.core.config:redis_client.py:22 Соединение с Redis закрыто
+INFO     backend.core.config:redis_client.py:13 Успешное подключение к Redis
+INFO     backend.core.config:redis_client.py:22 Соединение с Redis закрыто
