@@ -1,6 +1,6 @@
 import pytest
 
-from tests.API.User.user_client import UserClient
+from tests.api.user.user_client import UserClient
 from tests.conftest import (
     clean_cache_redis,
     UserCreationFunction,

@@ -1,8 +1,8 @@
 from backend.core.redis_client import get_redis_client, init_redis, close_redis
 import pytest
 
-from tests.API.User.user_client import UserClient
-from tests.API.Wallet.wallet_client import WalletClient
+from tests.api.user.user_client import UserClient
+from tests.api.wallet.wallet_client import WalletClient
 from tests.conftest import UserCreationFunction
 
 

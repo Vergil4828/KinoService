@@ -1,7 +1,7 @@
 import pytest
 import uuid
 
-from tests.API.User.user_client import UserClient
+from tests.api.user.user_client import UserClient
 from tests.conftest import UserCreationFunction
 from tests.data.API_User.user_test_data import LoginUserData
 

@@ -4,8 +4,8 @@ from jose import jwt
 import pytest
 import time
 from .middleware_test_data import UserWalletSubscriptionData
-from ..API.User.user_client import UserClient
-from ..API.Wallet.wallet_client import WalletClient
+from ..api.user.user_client import UserClient
+from ..api.wallet.wallet_client import WalletClient
 from ..conftest import UserCreationFunction
 
 

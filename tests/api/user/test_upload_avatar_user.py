@@ -3,7 +3,7 @@ import os
 import aiofiles
 import mimetypes
 from backend.core.redis_client import get_redis_client, init_redis, close_redis
-from tests.API.User.user_client import UserClient
+from tests.api.user.user_client import UserClient
 from tests.conftest import UserCreationFunction, UserCleanFunction
 
 TEST_UPLOAD_AVATARS_DIR = os.path.join(

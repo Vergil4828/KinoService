@@ -1,7 +1,7 @@
 import pytest
 import asyncio
 
-from tests.API.Wallet.wallet_client import WalletClient
+from tests.api.wallet.wallet_client import WalletClient
 from tests.conftest import UserCreationFunction, UserCleanFunction
 from tests.data.API_Wallet.wallet_test_data import WalletDepositData
 

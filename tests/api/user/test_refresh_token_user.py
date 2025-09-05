@@ -4,7 +4,7 @@ import pytest
 import time
 import asyncio
 
-from tests.API.User.user_client import UserClient
+from tests.api.user.user_client import UserClient
 from tests.conftest import UserCreationFunction, UserCleanFunction
 
 

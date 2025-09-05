@@ -3,7 +3,7 @@ import pytest
 import uuid
 import copy
 from tests.conftest import clean_user_now, UserCreationFunction, UserCleanFunction
-from tests.API.User.user_client import UserClient
+from tests.api.user.user_client import UserClient
 from tests.data.API_User.user_test_data import CreateUserData
 
 

@@ -2,13 +2,13 @@ from typing import AsyncGenerator, Callable, Optional, Any, Awaitable
 
 import httpx
 
-from tests.API.Wallet.wallet_client import WalletClient
+from tests.api.wallet.wallet_client import WalletClient
 import pytest
 import asyncio
 import os
 import shutil
 import uuid
-from tests.API.User.user_client import UserClient
+from tests.api.user.user_client import UserClient
 from tests.data.API_User.user_test_data import CreateUserData
 from motor.motor_asyncio import AsyncIOMotorClient
 from backend.core.redis_client import get_redis_client, init_redis, close_redis
@@ -93,7 +93,7 @@ async def registered_user_in_db_per_class(
         if "TestUploadAvatarPositive" in test_class_name:
             user_id = registered_user_data["response_data"].json()["user"]["id"]
             project_root = os.path.abspath(
-                os.path.join(os.path.dirname(__file__), "..", "..")
+                os.path.join(os.path.dirname(__file__), "..")
             )
             avatars_dir = os.path.join(project_root, "public", "uploads", "avatars")
             avatar_path = os.path.join(avatars_dir, user_id)

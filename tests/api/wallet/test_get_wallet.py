@@ -1,6 +1,6 @@
 import pytest
 
-from tests.API.Wallet.wallet_client import WalletClient
+from tests.api.wallet.wallet_client import WalletClient
 from tests.conftest import UserCreationFunction, UserCleanFunction
 
 
